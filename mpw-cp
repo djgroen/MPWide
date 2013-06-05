@@ -1,0 +1,94 @@
+#!/usr/bin/python
+# mpw-cp script for copying files.
+
+import sys
+import socket as s
+import time
+import os
+
+if len(sys.argv)==1:
+  print """
+  mpw-cp usage:
+  ./mpw-cp <source host>:<source file or dir> <destination host>:<destination file or dir> <number of streams> <pacing rate in MB> <tcp buffer in kB>
+
+  example for local cluster use with Gigabit Ethernet:
+  ./mpw-cp machine-a:/home/you/yourfile him@machine-b:/home/him/yourfileinhishome 4 500 256
+  """
+  sys.exit()
+
+reverse_server = 0
+# if reverse_server == 0 then the MPWide server will be placed on the destination host. 
+# if reverse_server == 1 then the MPWide server will be placed on the source host.      
+
+left_string = sys.argv[1]
+right_string = sys.argv[2]
+
+other_args=""
+if len(sys.argv)>3:
+  for i in range(3,len(sys.argv)):
+    other_args += sys.argv[i]
+    other_args += " "
+
+print other_args
+
+cstrings = left_string.split(":",3)
+sstrings = right_string.split(":",3)
+
+# Filter out "'s:" prefix which denotes server location.
+if cstrings[0] == "s":
+  reverse_server = 1
+  print "mpw-cp: Enabling REVERSE mode (server on source host)."
+  cstrings.pop(0)
+
+if sstrings[0] == "s":
+  sstrings.pop(0)
+
+leftside = cstrings
+rightside = sstrings
+
+if len(cstrings) == 1:
+  leftside = [s.gethostname(),cstrings[0]]
+
+if len(sstrings) == 1:
+  rightside = [s.gethostname(),sstrings[0]]
+
+scmd = ""
+ccmd = ""
+
+def url_filter(s):
+  t = s
+  if(t.find('@') >= 0):
+    s = s.split('@')
+    t = s[1]
+  return t
+
+# server side
+if len(sstrings) == 1:
+  scmd = "~/.mpwide/MPWFileCopy " + s.gethostbyname(url_filter(leftside[0])) + " 0 " + rightside[1] + " " + other_args + " > mpwide.log &"
+  scmdr = "~/.mpwide/MPWFileCopy " + s.gethostbyname(url_filter(leftside[0])) + " 0 " + rightside[1] + " " + other_args
+
+if len(cstrings) == 1:
+  ccmd = "~/.mpwide/MPWFileCopy "+ s.gethostbyname(url_filter(rightside[0])) + " 1 " + leftside[1]+ " " + other_args + " "
+  ccmdr = "~/.mpwide/MPWFileCopy "+ s.gethostbyname(url_filter(rightside[0])) + " 1 " + leftside[1]+ " " + other_args + " > mpwide.log & "
+
+if len(sstrings) == 2:
+  scmd = "ssh -f " + rightside[0] +" '~/.mpwide/MPWFileCopy "+ s.gethostbyname(url_filter(leftside[0]))+ " 0 "+ rightside[1]+ " "+ other_args +" > mpwide.log &'"
+  scmdr = "ssh " + rightside[0] +" '~/.mpwide/MPWFileCopy "+ s.gethostbyname(url_filter(leftside[0]))+ " 0 "+ rightside[1]+ " "+ other_args +"'"
+if len(cstrings) == 2:
+  ccmd = "ssh "+ leftside[0]+ " '~/.mpwide/MPWFileCopy "+ s.gethostbyname(url_filter(rightside[0]))+ " 1 "+ leftside[1]+ " "+ other_args +" '"
+  ccmdr = "ssh -f "+ leftside[0]+ " '~/.mpwide/MPWFileCopy "+ s.gethostbyname(url_filter(rightside[0]))+ " 1 "+ leftside[1]+ " "+ other_args +" > mpwide.log &' "
+
+print "mpw-cp: The client output will follow on screen:"
+
+if reverse_server==0:
+  print "mpw-cp: Server command:", scmd
+  print "mpw-cp: Client command:", ccmd
+  os.system(scmd)
+  time.sleep(3.0)
+  os.system(ccmd)
+else:
+  print "mpw-cp: Server command:", ccmdr
+  print "mpw-cp: Client command:", scmdr
+  os.system(ccmdr)
+  time.sleep(3.0)
+  os.system(scmdr)
