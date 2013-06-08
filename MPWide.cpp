@@ -93,89 +93,75 @@ static int relay_ssize = 8*1024;
 static int relay_rsize = 8*1024;
 
 #if PacingMode == 1
-//Pacing rate per stream.
-static double pacing_rate = 100*1024*1024;
-//Sleep time for SendRecvs in microseconds.
-static long long int pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
+  static double pacing_rate = 100*1024*1024; //Pacing rate per stream.
+  static long long int pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
 
-double MPW_getPacingRate() {
-  return pacing_rate;
-}
-void MPW_setPacingRate(double rate) {
-  if(rate == -1) {
-    pacing_rate = -1;
-    pacing_sleeptime = 0;
+  double MPW_getPacingRate() {
+    return pacing_rate;
   }
-  else {
-    pacing_rate = rate;
-    pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
-    cout << "Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us." << endl;
+  void MPW_setPacingRate(double rate) {
+    if(rate == -1) {
+      pacing_rate = -1;
+      pacing_sleeptime = 0;
+    }
+    else {
+      pacing_rate = rate;
+      pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
+      cout << "Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us." << endl;
+    }
   }
-}
-
 #endif
 
 typedef struct thread_tmp{
-  long long int sendsize;
-  long long int recvsize;
+  long long int sendsize, recvsize;
   long long int* dyn_recvsize; //For DynEx.
   int thread_id;
   int channel;
   int numchannels;
   int numrchannels; //Cycle only.
-  char *sendbuf;
-  char *recvbuf;
+  char* sendbuf;
+  char* recvbuf;
 }thread_tmp;
 
 /* global thread memory */
 static thread_tmp* ta;
 
 #ifdef PERF_TIMING
+  double GetTime(){
+    struct timeval tv;
+    gettimeofday( &tv, NULL);
+    double time;
+    time = (tv.tv_sec + (double)tv.tv_usec*1e-6);
+    return time;
+  }
 
-double GetTime(){
-  struct timeval tv;
-  gettimeofday( &tv, NULL);
-  double time;
-  time = (tv.tv_sec + (double)tv.tv_usec*1e-6);
-  return time;
-}
+  void MPW_setChunkSize(int sending, int receiving) {
+    tcpbuf_ssize = sending;
+    tcpbuf_rsize = receiving;
+    cout << "Chunk Size  modified to: " << sending << "/" << receiving << "." << endl;
+  }
 
-void MPW_setChunkSize(int sending, int receiving) {
-  tcpbuf_ssize = sending;
-  tcpbuf_rsize = receiving;
-  cout << "Chunk Size  modified to: " << sending << "/" << receiving << "." << endl;
-  return;
-}
+  long long int swapLLI( const long long int ll){
+    union ud{
+      char cval[8];
+      long long int llval;
+    }u;
 
-long long int swapLLI( const long long int ll){
-  union ud{
-    char cval[8];
-    long long int llval;
-  }u;
+    u.llval = ll;
 
-  u.llval = ll;
+    char tmp; //swaps...
+    tmp = u.cval[0]; u.cval[0] = u.cval[7]; u.cval[7] = tmp;
+    tmp = u.cval[1]; u.cval[1] = u.cval[6]; u.cval[6] = tmp;
+    tmp = u.cval[2]; u.cval[2] = u.cval[5]; u.cval[5] = tmp;
+    tmp = u.cval[3]; u.cval[3] = u.cval[4]; u.cval[4] = tmp;
+    return u.llval;
+  }
 
-  char tmp; //swaps...
-  tmp = u.cval[0]; u.cval[0] = u.cval[7]; u.cval[7] = tmp;
-  tmp = u.cval[1]; u.cval[1] = u.cval[6]; u.cval[6] = tmp;
-  tmp = u.cval[2]; u.cval[2] = u.cval[5]; u.cval[5] = tmp;
-  tmp = u.cval[3]; u.cval[3] = u.cval[4]; u.cval[4] = tmp;
-  return u.llval;
-}
-
-double BarrierTime   = 0.0;
-double SendRecvTime  = 0.0;
-double PackingTime   = 0.0;
-double UnpackingTime = 0.0;
+  double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
+  double SendRecvTime  = 0.0;
+  double PackingTime   = 0.0;
+  double UnpackingTime = 0.0;
 #endif
-
-void db(int a){
-  cout << a << endl;
-}
-
-void db(int a,int b){
-  cout << a << "." << b << endl;
-}
 
 /* malloc function, duplicated from the TreePM code. */
 void *MPWmalloc( const size_t size){
@@ -212,10 +198,6 @@ char *MPW_DNSResolve(string host) {
   std::copy(host.begin(), host.end(), l_host);
   l_host[host.size()] = '\0';
   return MPW_DNSResolve(l_host);
-}
-
-void MPW_setWin(int channel, int size) {
-  client[channel].setWin(size);
 }
 
 int selectSockets(int wchannel, int rchannel, int mask)
@@ -261,16 +243,6 @@ int MPW_NumChannels(){
   return num_streams;
 }
 
-/* Connections output */
-void MPW_Print() {
-  for(int i=0;i<num_streams;i++) {
-    fprintf( stderr, "MPWide connection stream #: %d\n", i);
-    fprintf( stderr, "MPWide base connection port:%d\n", port[i]);
-    fprintf( stderr, "MPWide remote_url:%s\n", remote_url[i].c_str());
-  }
-  fflush(stderr);
-}
-
 long long int bytes_sent;
 bool stop_monitor = false;
 
@@ -282,13 +254,13 @@ void *MPW_TBandwidth_Monitor(void *args)
   long long int old_bytes_sent = 0;
   long long int cur_bytes_sent = 0;
   long long int old_time = 0;
-
+  
   while(!stop_monitor) {
     if(old_time != int(GetTime())) {
-	  cur_bytes_sent = bytes_sent;
-	  myfile << "time: " << int(GetTime()) << " bandwidth: " << cur_bytes_sent - old_bytes_sent << endl;
-   	  old_bytes_sent = cur_bytes_sent;
-   	  old_time = int(GetTime());
+      cur_bytes_sent = bytes_sent;
+      myfile << "time: " << int(GetTime()) << " bandwidth: " << cur_bytes_sent - old_bytes_sent << endl;
+      old_bytes_sent = cur_bytes_sent;
+      old_time = int(GetTime());
     }
     usleep(1000);
   }
@@ -543,6 +515,16 @@ void EraseStream(int i) {
   client.erase(client.begin()+i);
   remote_url.erase(remote_url.begin()+i);
   num_streams--;
+}
+
+void MPW_setWin(int channel, int size) {
+  client[channel].setWin(size);
+}
+
+void MPW_setPathWin(int path, int size) {
+  for(int i=0; i < paths[path].num_streams; i++) {
+    client[paths[path].streams[i]].setWin(size);
+  }
 }
 
 // Return 0 on success (negative on failure).
@@ -1080,12 +1062,6 @@ long long int MPW_DSendRecv( char *sendbuf, long long int sendsize,
   return total_recv_size;
 }
 
-void printThreadTmp (thread_tmp t) {
-  cout << "Thread #" << t.thread_id << " of " << t.numchannels << " send channels and " << t.numrchannels << " recv channels." << endl;
-  cout << "Sendsize: " << t.sendsize << ", Recvsize: " << t.recvsize << endl;
-  cout << "DynRecvsize: " << t.dyn_recvsize[0] << ", channel: " << t.channel%65536 << "," << (t.channel/65536)-1 << endl;
-}
-
 /* Low-level command */
 long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, long long int maxrecvsize2, int* ch_send, int nc_send, int* ch_recv, int nc_recv, bool dynamic) {
   #ifdef PERF_TIMING
@@ -1154,9 +1130,7 @@ long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, l
     ta[i].thread_id = i;
     ta[i].numchannels  = nc_send;
     ta[i].numrchannels = nc_recv;
-
-    printThreadTmp(ta[i]);
-
+    //printThreadTmp(ta[i]);
     if(i>0) {
       if(dynamic) {
         int code = pthread_create(&streams[i], NULL, MPW_TDynEx, &ta[i]);
@@ -1385,7 +1359,8 @@ void MPW_Barrier() {
   }
 }
 
-extern "C" {
+/* C interface */
+extern "C" { 
   void MPW_SendRecv1_c (char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel) {
     //string urls(url)
     MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize, base_channel);
@@ -1397,4 +1372,19 @@ extern "C" {
   void MPW_PSendRecv_c(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels) {
     MPW_PSendRecv(sendbuf, sendsize, recvbuf, recvsize, channel, num_channels);
   }
+}
+
+/* Diagnostics */
+void printThreadTmp (thread_tmp t) { //print thread specific information.
+  cout << "Thread #" << t.thread_id << " of " << t.numchannels << " send channels and " << t.numrchannels << " recv channels." << endl;
+  cout << "Sendsize: " << t.sendsize << ", Recvsize: " << t.recvsize << endl;
+  cout << "DynRecvsize: " << t.dyn_recvsize[0] << ", channel: " << t.channel%65536 << "," << (t.channel/65536)-1 << endl;
+}
+void MPW_Print() { //print MPWide stream specific information.
+  for(int i=0;i<num_streams;i++) {
+    fprintf( stderr, "MPWide connection stream #: %d\n", i);
+    fprintf( stderr, "MPWide base connection port:%d\n", port[i]);
+    fprintf( stderr, "MPWide remote_url:%s\n", remote_url[i].c_str());
+  }
+  fflush(stderr);
 }
