@@ -57,6 +57,7 @@ void MPW_Init();
 
 /* Set tcp window size. */
 void MPW_setWin(int channel, int size);
+void MPW_setPathWin(int path, int size);
 
 /* Close channels. */
 void MPW_CloseChannels(int* channels , int num_channels);
@@ -97,6 +98,12 @@ void MPW_Barrier(int channel);
 
 /* Adjust the global feeding pace. */
 void MPW_setChunkSize(int sending, int receiving);
+
+/* Non-blocking functionalities. */
+int MPW_ISendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path);
+bool MPW_Has_NBE_Finished(int NBE_id);
+void MPW_Wait(int NBE_id);
+
 
 #if PacingMode == 1
 /* Get and set rates for pacing data. */

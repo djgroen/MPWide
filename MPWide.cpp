@@ -1265,7 +1265,7 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
   #endif
 }
 
-void MPW_SendRecv( char *sendbuf, long long int sendsize, char *recvbuf, long long int recvsize, int *channel, int nc){
+void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int* channel, int nc){
 
 #if SendRecvInputReport == 1
   cout << "MPW_SendRecv(sendsize=" << sendsize << ",recvsize=" << recvsize << ",nc=" << nc << ");" << endl;
@@ -1284,7 +1284,6 @@ void MPW_SendRecv( char *sendbuf, long long int sendsize, char *recvbuf, long lo
   char **recvbuf2 = new char*[nc];
   long long int *sendsize2 = new long long int[nc];
   long long int *recvsize2 = new long long int[nc];
-
   
   int offset = 0;
   int offset2 = 0;
@@ -1321,14 +1320,13 @@ void MPW_Barrier(int channel)
   #endif
 
   int i = channel;
-
+  char s[8];
+  
   if(isclient[i]) {
-    client[i].send("Test 1!",8);
-    char s[8];
+    client[i].send("Test 1!",8);  
     client[i].recv(s,8);
   }
   else {
-    char s[8];
     client[i].recv(s,8);
     client[i].send(s,8);
   }
@@ -1387,4 +1385,78 @@ void MPW_Print() { //print MPWide stream specific information.
     fprintf( stderr, "MPWide remote_url:%s\n", remote_url[i].c_str());
   }
   fflush(stderr);
+}
+
+
+/* Non-blocking extension */
+
+typedef struct MPW_NBE {
+  pthread_t pthr_id;
+  int id;
+  thread_tmp NBE_args;
+}MPW_NBE;
+
+static vector<MPW_NBE> MPW_nonBlockingExchanges;
+
+/* A TSendRecv that encapsulates a full MPW_SendRecv. */
+void *MPW_TSendRecv_Full(void *args)
+{
+  thread_tmp *t = (thread_tmp *)args;
+  
+  MPW_SendRecv(t->sendbuf, t->sendsize, t->recvbuf, t->recvsize, t->channel); 
+  //NOTE: the channel variable in the thread_tmp structure is repurposed as a path variable here (both are of 'int' datatype). 
+  //It also gets changed to a negative number whenever the SendRecv is completed.
+  
+  t->channel = (t->channel+1)*-1; //turn channel into a negative number to indicate completion.
+  return NULL;
+}
+
+
+int MPW_ISendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
+  MPW_NBE new_nonblocking_exchange = MPW_NBE();
+  new_nonblocking_exchange.NBE_args = thread_tmp();
+  new_nonblocking_exchange.NBE_args.sendbuf = sendbuf;
+  new_nonblocking_exchange.NBE_args.sendsize = sendsize;
+  new_nonblocking_exchange.NBE_args.recvbuf = recvbuf;
+  new_nonblocking_exchange.NBE_args.recvsize = recvsize;
+  new_nonblocking_exchange.NBE_args.channel = path;
+   
+  if(MPW_nonBlockingExchanges.size() == 0) { //no other non-blocking comms? Use id 0.
+    new_nonblocking_exchange.id = 0;
+  }
+  else { //generate a new unique incremented id.
+    new_nonblocking_exchange.id = MPW_nonBlockingExchanges[MPW_nonBlockingExchanges.size()-1].id + 1;
+  }
+  
+  MPW_nonBlockingExchanges.push_back(new_nonblocking_exchange);
+  MPW_nonBlockingExchanges[MPW_nonBlockingExchanges.size()-1].NBE_args = new_nonblocking_exchange.NBE_args;
+  
+  int code = pthread_create(&(MPW_nonBlockingExchanges[MPW_nonBlockingExchanges.size()-1].pthr_id), 
+                            NULL, MPW_TSendRecv_Full, &(MPW_nonBlockingExchanges[MPW_nonBlockingExchanges.size()-1].NBE_args));
+                            
+  return new_nonblocking_exchange.id;
+}
+
+int Find_NBE_By_ID(int NBE_id) {
+  int element_number = -1;
+  for(int i=0; i<MPW_nonBlockingExchanges.size(); i++) {
+    if(MPW_nonBlockingExchanges[i].id == NBE_id) {
+      element_number = i;
+    }
+  }
+  if(element_number < 0) {
+    cout << "WARNING: you used a non existent NonBlockingExchange ID number in MPW_Wait." << endl;
+  }
+  return element_number;
+}
+
+bool MPW_Has_NBE_Finished(int NBE_id) {
+  int element_number = Find_NBE_By_ID(NBE_id);
+  return(MPW_nonBlockingExchanges[element_number].NBE_args.channel >= 0);
+}
+
+void MPW_Wait(int NBE_id) {
+  int element_number = Find_NBE_By_ID(NBE_id);  
+  pthread_join(MPW_nonBlockingExchanges[element_number].pthr_id, NULL);
+  MPW_nonBlockingExchanges.erase(MPW_nonBlockingExchanges.begin()+element_number);
 }

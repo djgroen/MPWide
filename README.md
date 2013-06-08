@@ -5,7 +5,7 @@ MPWide is a communication library for message passing across wide area networks.
 
 ------------------
 MPWide README
-version 1.5d, last modified on May 31st 2013
+version 1.51, last modified on June 8th 2013
 ------------------
 
 This is a README for the MPWide communication library, which has been written by Derek Groen.
@@ -146,6 +146,11 @@ purposes we recommend using mpw-cp instead.
 ------------------
 Recent Updates
 ------------------
+
+* June 8th 2013,
+-- Added MPW_SetPathWin().
+-- Added MPW_ISendRecv and related functions to allow for non-blocking SendRecvs. 
+   This functionality is still in beta.
 
 * May 31st 2013,
 -- Removed an important bug in CreatPath.

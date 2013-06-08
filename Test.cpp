@@ -86,12 +86,27 @@ int main(int argc, char** argv){
     MPW_setWin(i,winsize);
   }
 
+  int comm_mode = 1; //0 for regular sendrecv tests, 1 for non-blocking sendrecv tests.
+
   /* test loop */
   for(int i=0; i<20; i++) {
 
-    MPW_SendRecv(msg,len,msg2,len,channels,size); ///non-path version.
-//    MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
+//    MPW_SendRecv(msg,len,msg2,len,channels,size); ///non-path version.
+    if(comm_mode==0) {
+      MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
+    }
+    else if(comm_mode == 1) {
+      int id = MPW_ISendRecv(msg,len,msg2,len,path_id);
 
+      sleep(1);
+    
+      cout << "Has the non-blocking comm finished?" << endl;
+      MPW_Has_NBE_Finished(id);
+      cout << "Doing something else..." << endl;
+    
+      MPW_Wait(id);
+    }
+    
     sleep(1);
     cout << "End of iteration " << i << "." << endl;
   }
