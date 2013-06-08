@@ -5,7 +5,7 @@ MPWide is a communication library for message passing across wide area networks.
 
 ------------------
 MPWide README
-version 1.51, last modified on June 8th 2013
+version 1.5.1, last modified on June 8th 2013
 ------------------
 
 This is a README for the MPWide communication library, which has been written by Derek Groen.
