@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <cstdlib>
 #include <vector>
+#include <unistd.h>
 
 #define SendRecvInputReport 0
 int MPWideAutoTune = 1;
