@@ -1,8 +1,8 @@
 /**************************************************************
  * This file is part of the MPWide communication library
  *
- * Written by Derek Groen with thanks going out to Keigo Nitadori, 
- * Hans Blom and Tomoaki Ishiyama.
+ * Written by Derek Groen with thanks going out to Steven Rieder,
+ * Simon Portegies Zwart, Joris Borgdorff, Hans Blom and Tomoaki Ishiyama.
  * for questions, please send an e-mail to: 
  *                                     djgroennl@gmail.com
  * MPWide is free software: you can redistribute it and/or modify
