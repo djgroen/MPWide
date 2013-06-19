@@ -61,7 +61,7 @@ int main(int argc, char** argv){
     size += streams[i];
   }
 
-  string hosts[size*2];
+  string *hosts = new string[size*2];
   int ports[size*2];
 
   int offset = 0;
@@ -80,6 +80,7 @@ int main(int argc, char** argv){
   cout << "Initializing..." << endl;
 
   MPW_Init(hosts,ports,size*2);
+  delete [] hosts;
 
 //  MPW_TinyTest();
 
