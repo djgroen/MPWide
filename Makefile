@@ -13,12 +13,12 @@ dg_objects   = DataGather.o
 fw_objects = Forwarder.o
 wcp_objects =  mpw-cp.o
 
-# OSX
-# SO_EXT = dylib
+# OS X
+#SO_EXT = dylib
+#SHARED_LINK_FLAGS = -dynamiclib
+
 # Linux
 SO_EXT = so
-
-#SHARED_LINK_FLAGS = -dynamiclib
 SHARED_LINK_FLAGS = -shared
 
 all : MPWTest MPWTestRestart MPWDataGather MPWForwarder MPWFileCopy libMPW.a libMPW.$(SO_EXT)
