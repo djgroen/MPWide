@@ -59,7 +59,7 @@ channels = []
 
 for i in xrange(0,size):
     channels.append(i)
-    MPWide.MPW_setWin(i,winsize)
+    MPWide.setWin(i,winsize)
 
 
 # test loop 

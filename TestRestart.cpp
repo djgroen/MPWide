@@ -96,9 +96,9 @@ int main(int argc, char** argv){
     offset = size;
   }
 
-  string hosts[size]; 
-  int ports[size];    
-  int cports[size];
+  string *hosts = new string[size]; 
+  int *ports = new int[size];    
+  int *cports = new int[size];
 
   for(int i=0; i<size; i++) {
     hosts[i] = host;
@@ -110,6 +110,10 @@ int main(int argc, char** argv){
   }
 
   MPW_Init(hosts,ports,cports,size);
+  // Delete created arrays
+  delete [] hosts;
+  delete [] ports;
+  delete [] cports;
 
   cerr << "\nCommencing Test Suite.\n" << endl;
 
