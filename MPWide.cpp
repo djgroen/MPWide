@@ -42,8 +42,8 @@ void MPW_setAutoTuning(bool b) {
   }
 }
 
-/* Enable(1)/Disable(0) Performance Timing Measurements */
-#define PERF_TIMING 1
+/* Enable (define)/Disable(don't define) Performance Timing Measurements */
+//#define PERF_TIMING
 /* Performance report verbosity: 1 reports speeds on send/recv. 2 reports on initialization details.
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
@@ -247,6 +247,8 @@ int MPW_NumChannels(){
 long long int bytes_sent;
 bool stop_monitor = false;
 
+#ifdef PERF_TIMING
+#if MONITORING == 1
 /* Performs per-second bandwidth monitoring in real-time */
 void *MPW_TBandwidth_Monitor(void *args)
 {
@@ -268,6 +270,8 @@ void *MPW_TBandwidth_Monitor(void *args)
   myfile.close();
   return NULL;
 }
+#endif
+#endif
 
 typedef struct init_tmp {
   int i;
@@ -431,9 +435,11 @@ void MPW_InitStreams(int *stream_indices, int numstreams) {
 
   if(MPW_INITIALISED == false) {
     MPW_INITIALISED = true;
+    #ifdef PERF_TIMING
     #if MONITORING == 1
     pthread_t monitor;
     int code = pthread_create(&monitor, NULL, MPW_TBandwidth_Monitor, NULL);
+    #endif
     #endif
     /* Allocate global thread memory */
     ta = (thread_tmp *) MPWmalloc( sizeof(thread_tmp) * num_streams);
@@ -826,7 +832,7 @@ void MPW_Relay(int* channels, int* channels2, int num_channels) {
 void *MPW_TDynEx(void *args)
 {
 //  cout << "TDynEx." << endl;
-  double t = GetTime();
+//  double t = GetTime();
   bool cycling = false;
   thread_tmp *ta = (thread_tmp *)args;
 
