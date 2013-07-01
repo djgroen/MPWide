@@ -50,7 +50,7 @@ void MPW_setAutoTuning(bool b) {
 #define PERF_REPORT 1
 //#define MONITORING 1
 
-#define min(X,Y)   (X < Y ? X : Y)
+#define min(X,Y) ((X) < (Y) ? (X) : (Y))
 
 using namespace std;
 
