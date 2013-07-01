@@ -48,7 +48,7 @@ void MPW_setAutoTuning(bool b) {
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
 #define PERF_REPORT 1
-#define MONITORING 1
+//#define MONITORING 1
 
 #define min(X,Y)   (X < Y ? X : Y)
 
@@ -429,7 +429,11 @@ void MPW_InitStreams(int *stream_indices, int numstreams) {
   cout << "Number of streams       : " << num_streams << endl;
   cout << "tcp buffer parameter    : " << WINSIZE << endl;
   cout << "pacing rate             : " << pacing_rate << " bytes/s." << endl;
+#ifdef MONITORING
   cout << "bandwidth monitoring    : " << MONITORING << endl;
+#else
+  cout << "bandwidth monitoring    : 0" << endl;
+#endif
   cout << "-----------------------------------------------------------" << endl;
   cout << "END OF SETUP PHASE." << endl;
 
