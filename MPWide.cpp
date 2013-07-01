@@ -48,6 +48,35 @@ void MPW_setAutoTuning(bool b) {
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
 #define PERF_REPORT 1
+#define LVL_ERR 0
+#define LVL_WARN 2
+#define LVL_INFO 4
+#define LVL_DEBUG 6
+#define LVL_TRACE 8
+
+#define LOG_LVL LVL_ERR
+
+#if LOG_LVL >= LVL_ERR
+#define LOG_ERR(MSG) cout << MSG << endl;
+#else
+#define LOG_ERR(MSG)
+#endif
+#if LOG_LVL >= LVL_WARN
+#define LOG_WARN(MSG) cout << MSG << endl;
+#else
+#define LOG_WARN(MSG)
+#endif
+#if LOG_LVL >= LVL_INFO
+#define LOG_INFO(MSG) cout << MSG << endl;
+#else
+#define LOG_INFO(MSG)
+#endif
+#if LOG_LVL >= LVL_DEBUG
+#define LOG_DEBUG(MSG) cout << MSG << endl;
+#else
+#define LOG_DEBUG(MSG)
+#endif
+
 //#define MONITORING 1
 
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -108,7 +137,7 @@ static int relay_rsize = 8*1024;
     else {
       pacing_rate = rate;
       pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
-      cout << "Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us." << endl;
+      LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.")
     }
   }
 #endif
@@ -139,7 +168,7 @@ static thread_tmp* ta;
   void MPW_setChunkSize(int sending, int receiving) {
     tcpbuf_ssize = sending;
     tcpbuf_rsize = receiving;
-    cout << "Chunk Size  modified to: " << sending << "/" << receiving << "." << endl;
+    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".")
   }
 
   long long int swapLLI( const long long int ll){
@@ -187,11 +216,12 @@ char *MPW_DNSResolve(char *host){
   }
   if(host_info) {
     const in_addr* address = (in_addr*)host_info->h_addr_list[0] ;
-    cout << " address found: " << inet_ntoa( *address ) << endl;
+    LOG_DEBUG(" address found: " << inet_ntoa( *address ))
     host = (char*) (inet_ntoa(*address));
     return host;
   }
-  cout << "Error: Unable to resolve host name" << endl;
+  LOG_ERR("Error: Unable to resolve host name")
+  return NULL;
 }
 
 char *MPW_DNSResolve(string host) {
@@ -235,7 +265,7 @@ int selectSockets(int wchannel, int rchannel, int mask)
     }
   }
   else if (ok<0){
-    cout << "socketSelect error: " << errno << endl; //" Msg: " << strerror(errno) << endl;
+    LOG_ERR("socketSelect error: " << errno); //" Msg: " << strerror(errno));
   }
   return access;
 }
@@ -325,7 +355,7 @@ void* MPW_InitStream(void* args)
         if(connected) { isclient[i] = 0; } 
       }
       else {
-        cout << "Bind on ch #"<< i <<" failed: waiting for 1 s." << endl;
+        LOG_WARN("Bind on ch #"<< i <<" failed: waiting for 1 s.")
     	sleep(1);
       }
     }
@@ -337,7 +367,7 @@ void* MPW_InitStream(void* args)
 void MPW_CloseChannels(int* channel, int numchannels) 
 {
   for(int i=0; i<numchannels; i++) {
-    cout << "Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i] << endl;
+    LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i])
     client[channel[i]].close();
     if(!isclient[channel[i]]) {
       client[channel[i]].closeServer();
@@ -356,7 +386,7 @@ void MPW_ReOpenChannels(int* channel, int numchannels)
     t[i].i    = channel[i];
     t[i].port = port[channel[i]];
     t[i].cport = cport[channel[i]];
-    cout << "ReOpening client channel #" << channel[i] << " with port = " << port[channel[i]] << " and cport = " << cport[channel[i]] << endl;
+    LOG_INFO("ReOpening client channel #" << channel[i] << " with port = " << port[channel[i]] << " and cport = " << cport[channel[i]])
     int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
   }
 
@@ -370,7 +400,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
   num_streams += numstreams;
 
   for(int i = 0; i<numstreams; i++) {
-    cout << "MPW_DNSResolve resolves " << url[i] << " to address " << MPW_DNSResolve(url[i]) << "." << endl;
+    LOG_DEBUG("MPW_DNSResolve resolves " << url[i] << " to address " << MPW_DNSResolve(url[i]) << ".");
     remote_url.push_back(MPW_DNSResolve(url[i]));
     client.push_back(Socket());
     isclient.push_back(1);
@@ -384,7 +414,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     if(url[i].compare("0") == 0) {
       isclient[i] = 0;
       cport[i]    = -2;
-      cout << "Empty IP address given: Switching to Server-only mode." << endl;
+      LOG_INFO("Empty IP address given: Switching to Server-only mode.")
     }
   }
 }
@@ -422,20 +452,20 @@ void MPW_InitStreams(int *stream_indices, int numstreams) {
     }
   }
 
-  cout << "-----------------------------------------------------------" << endl;
-  cout << "MPWide Settings:" << endl;
-  cout << "Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize << endl;
-  cout << "Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize << endl;
-  cout << "Number of streams       : " << num_streams << endl;
-  cout << "tcp buffer parameter    : " << WINSIZE << endl;
-  cout << "pacing rate             : " << pacing_rate << " bytes/s." << endl;
+  LOG_INFO("-----------------------------------------------------------")
+  LOG_INFO("MPWide Settings:")
+  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize)
+  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize)
+  LOG_INFO("Number of streams       : " << num_streams)
+  LOG_INFO("tcp buffer parameter    : " << WINSIZE)
+  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.")
 #ifdef MONITORING
-  cout << "bandwidth monitoring    : " << MONITORING << endl;
+  LOG_INFO("bandwidth monitoring    : " << MONITORING)
 #else
-  cout << "bandwidth monitoring    : 0" << endl;
+  LOG_INFO("bandwidth monitoring    : 0")
 #endif
-  cout << "-----------------------------------------------------------" << endl;
-  cout << "END OF SETUP PHASE." << endl;
+  LOG_INFO("-----------------------------------------------------------")
+  LOG_INFO("END OF SETUP PHASE.")
 
   if(MPW_INITIALISED == false) {
     MPW_INITIALISED = true;
@@ -1041,7 +1071,7 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 void MPW_splitBuf(char* buf, long long int bsize, int num_chunks, char** split_buf, long long int* chunk_sizes) {
 
   if(num_chunks < 1) { 
-    cout << "ERROR: MPW_splitBuf is about to split into 0 chunks." << endl;
+    LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.")
     exit(0);
   }
   long long int bsize_each = bsize / num_chunks;

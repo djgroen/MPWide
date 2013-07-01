@@ -181,7 +181,9 @@ bool Socket::send ( const char* s, long long int size ) const
     ok = select(m_sock+1, &sock, (fd_set *) 0, (fd_set *) 0, &timeout);
     if(ok<1) {
       usleep(50000);
+      #if REPORT_BUFFERSIZES > 0
       cout << "s";
+      #endif
       count++;
       if(ok<0) {
         fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
