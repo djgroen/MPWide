@@ -177,22 +177,6 @@ static thread_tmp* ta;
     LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".")
   }
 
-  long long int swapLLI( const long long int ll){
-    union ud{
-      char cval[8];
-      long long int llval;
-    }u;
-
-    u.llval = ll;
-
-    char tmp; //swaps...
-    tmp = u.cval[0]; u.cval[0] = u.cval[7]; u.cval[7] = tmp;
-    tmp = u.cval[1]; u.cval[1] = u.cval[6]; u.cval[6] = tmp;
-    tmp = u.cval[2]; u.cval[2] = u.cval[5]; u.cval[5] = tmp;
-    tmp = u.cval[3]; u.cval[3] = u.cval[4]; u.cval[4] = tmp;
-    return u.llval;
-  }
-
   double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
   double SendRecvTime  = 0.0;
   double PackingTime   = 0.0;
