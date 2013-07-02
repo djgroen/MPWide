@@ -938,7 +938,7 @@ void *MPW_TDynEx(void *args)
         b += n;
 
         if(b == 8) { //recvsize data is now available.
-          size_t size_found = ::endian_native_size_t(net_size_found);
+          size_t size_found = ::deserialize_size_t(net_size_found);
 
           if (size_found > maxrecvsize) { //Would we want to do reallocs here???
             cerr << "ERROR: DynEx recv size is greater than given constraint." << endl;
@@ -978,7 +978,7 @@ void *MPW_TDynEx(void *args)
     /* SENDING POSSIBLE */
     if(mode/2==1) {
       if(a<8) { //send size first.
-        ::endian_net_size_t(net_send_size, (size_t)totalsendsize);
+        ::serialize_size_t(net_send_size, (const size_t)totalsendsize);
         int n = client[channel].isend((char*)net_send_size + a,8-a);
         a += n;
       }

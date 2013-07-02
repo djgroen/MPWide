@@ -2,6 +2,9 @@
 //  serialization.h
 //  MPWide
 //
+//  These functions are endian-neutral, and assume big-endian byte order on networks.
+//  They are inline and with proper compiler flags will be be very efficient.
+//
 //  Created by Joris Borgdorff on 02-07-13.
 //  Copyright (c) 2013 Derek Groen. All rights reserved.
 //
@@ -14,7 +17,7 @@
 #include <cstring> // memset
 
 inline void
-endian_net_size_t(unsigned char *net_number, const size_t native_number)
+serialize_size_t(unsigned char *net_number, const size_t native_number)
 {   
     if (sizeof(size_t) >= 8)
     {
@@ -36,7 +39,7 @@ endian_net_size_t(unsigned char *net_number, const size_t native_number)
 }
 
 inline size_t
-endian_native_size_t(const unsigned char *net_number)
+deserialize_size_t(const unsigned char *net_number)
 {
     if (sizeof(size_t) >= 8)
     {
