@@ -13,6 +13,7 @@
 		A417F27F1781C8A000653B10 /* Socket.h in Headers */ = {isa = PBXBuildFile; fileRef = A417F2701781C7CF00653B10 /* Socket.h */; };
 		A417F28D1781C8F700653B10 /* libMPW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A417F2771781C88300653B10 /* libMPW.a */; };
 		A417F28E1781C91D00653B10 /* Test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A417F2711781C7CF00653B10 /* Test.cpp */; };
+		C5C10C2D1782E6F700EB8EA5 /* serialization.h in Headers */ = {isa = PBXBuildFile; fileRef = C5C10C2B1782E6F700EB8EA5 /* serialization.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -54,6 +55,7 @@
 		A417F2721781C7CF00653B10 /* TestRestart.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestRestart.cpp; sourceTree = "<group>"; };
 		A417F2771781C88300653B10 /* libMPW.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libMPW.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		A417F2841781C8EE00653B10 /* MPWTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MPWTest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C5C10C2B1782E6F700EB8EA5 /* serialization.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = serialization.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -131,6 +133,7 @@
 		A4D746371781C75D00BF5E95 = {
 			isa = PBXGroup;
 			children = (
+				C5C10C2B1782E6F700EB8EA5 /* serialization.h */,
 				A417F2571781C7CE00653B10 /* DataGather.cpp */,
 				A417F2581781C7CE00653B10 /* Forwarder.cpp */,
 				A417F2591781C7CE00653B10 /* Makefile */,
@@ -156,6 +159,7 @@
 			files = (
 				A417F27E1781C8A000653B10 /* MPWide.h in Headers */,
 				A417F27F1781C8A000653B10 /* Socket.h in Headers */,
+				C5C10C2D1782E6F700EB8EA5 /* serialization.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -247,6 +251,7 @@
 		A417F27A1781C88300653B10 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -255,6 +260,7 @@
 		A417F27B1781C88300653B10 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -279,9 +285,10 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++98";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_CXX0X_EXTENSIONS = NO;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
@@ -311,9 +318,10 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++98";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_CXX0X_EXTENSIONS = NO;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
@@ -341,6 +349,7 @@
 				A417F27B1781C88300653B10 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		A417F28A1781C8EE00653B10 /* Build configuration list for PBXNativeTarget "MPWTest" */ = {
 			isa = XCConfigurationList;
@@ -349,6 +358,7 @@
 				A417F28C1781C8EE00653B10 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		A4D7463B1781C75D00BF5E95 /* Build configuration list for PBXProject "MPWide" */ = {
 			isa = XCConfigurationList;
