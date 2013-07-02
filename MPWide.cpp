@@ -102,15 +102,20 @@ class MPWPath {
     string remote_url; // end-point of the path
     int *streams; // id numbers of the streams used
     int num_streams; // number of streams
+    int *refs; // when refs reaches zero, delete streams
 
     MPWPath(string remote_url, int* str, int numstr)
-      :remote_url(remote_url), num_streams(numstr)
+      : remote_url(remote_url), num_streams(numstr)
     {
+      refs = new int(1);
       streams = new int[numstr];
-      for(int i=0; i<numstr; i++) {
-        streams[i] = str[i];
-      }
+      memcpy(streams, str, num_streams*sizeof(int));
     }
+    MPWPath(const MPWPath &other) : remote_url(other.remote_url), num_streams(other.num_streams), refs(other.refs), streams(other.streams)
+    {
+      (*refs)++;
+    }
+    ~MPWPath() { if (--(*refs) == 0) { delete refs; delete [] streams; } }
 };
 /* List of paths. */
 static vector<MPWPath> paths;
@@ -225,6 +230,8 @@ char *MPW_DNSResolve(char *host){
 }
 
 char *MPW_DNSResolve(string host) {
+  // TODO: Memory leak
+  // replace with: return MPW_DNSResolve((char *)host.c_str());
   char * l_host = new char[host.size() + 1];
   std::copy(host.begin(), host.end(), l_host);
   l_host[host.size()] = '\0';
@@ -507,6 +514,7 @@ void MPW_Init(string* url, int* ports, int* cports, int numstreams)
 int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) {
   int path_ports[streams_in_path];
   int path_cports[streams_in_path];
+  // TODO: memory leak?
   string *hosts = new string[streams_in_path];
   int stream_indices[streams_in_path];
   for(int i=0; i<streams_in_path; i++) {
@@ -533,7 +541,8 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
 
   MPW_InitStreams(paths[paths.size()-1].streams, paths[paths.size()-1].num_streams);
 
-  //delete hosts;
+  // TODO: this was commented, can we uncomment it to prevent a memory leak?
+  //delete [] hosts;
 
   /* Return the identifier for the MPWPath we just created. */
   return paths.size()-1;
