@@ -24,6 +24,7 @@
 #include "MPWide.h"
 #include <errno.h>
 #include "Socket.h"
+#include "serialization.h"
 #include <sys/time.h>
 #include <pthread.h>
 #include <cstdlib>
@@ -909,11 +910,12 @@ void *MPW_TDynEx(void *args)
   cout << "TDynEx(sendsize="<<sendsize<<",maxrecvsize="<<maxrecvsize<<",ch_send="<<channel<<",ch_recv="<<channel2<<",nc="<<numschannels<<"/"<<numrchannels<<endl;
   #endif
 
-  long long int size_found = -1;
+  unsigned char net_size_found[8], net_send_size[8];
   long long int recvsizeall = -1;
-
-  long long int a,b,c,d;
-  a = b = c = d = 0;
+  size_t a, b;
+  long long int c,d;
+  a = b = 0;
+  c = d = 0;
 
   // recvsize is initially set to the size of the long long int which holds the message size.
   bool recv_settings_known = false;   //this thread knows how much data may be received.
@@ -932,13 +934,11 @@ void *MPW_TDynEx(void *args)
     /* (1.) Receiving is possible, but only done by thread 0 until we know more. */
     if(mode%2 == 1) {
       if(!recv_settings_known) {
-        int n = client[channel2].irecv(((char*) (&size_found))+b,8-b); 
+        int n = client[channel2].irecv((char *)net_size_found+b,8-b);
         b += n;
 
         if(b == 8) { //recvsize data is now available.
-          #ifdef EndianConvert
-          size_found = swapLLI(size_found);
-          #endif
+          size_t size_found = ::endian_native_size_t(net_size_found);
 
           if (size_found > maxrecvsize) { //Would we want to do reallocs here???
             cerr << "ERROR: DynEx recv size is greater than given constraint." << endl;
@@ -978,12 +978,8 @@ void *MPW_TDynEx(void *args)
     /* SENDING POSSIBLE */
     if(mode/2==1) {
       if(a<8) { //send size first.
-        long long int tmpsize = totalsendsize;
-
-        #ifdef EndianConvert
-        tmpsize = swapLLI(tmpsize);
-        #endif
-        int n = client[channel].isend(((char*) (&tmpsize))+a,8-a);
+        ::endian_net_size_t(net_send_size, (size_t)totalsendsize);
+        int n = client[channel].isend((char*)net_send_size + a,8-a);
         a += n;
       }
       else { //send data after that, leave 16byte margin to prevent SendRecv from crashing.
