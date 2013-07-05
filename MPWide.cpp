@@ -130,7 +130,7 @@ static int relay_rsize = 8*1024;
 
 #if PacingMode == 1
   static double pacing_rate = 100*1024*1024; //Pacing rate per stream.
-  static long long int pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
+  static useconds_t pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
 
   double MPW_getPacingRate() {
     return pacing_rate;
@@ -530,7 +530,7 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
   //delete [] hosts;
 
   /* Return the identifier for the MPWPath we just created. */
-  return paths.size()-1;
+  return (int)paths.size()-1;
 }
 
 void DecrementStreamIndices(int q) {
