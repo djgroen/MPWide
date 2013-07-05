@@ -37,6 +37,8 @@ void MPW_Print();
 int MPW_NumChannels();
 
 // Return path id or negative error value. 
+int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int streams_in_path); 
+int MPW_ConnectPath(int path_id);
 int MPW_CreatePath(string host, int server_side_base_port, int num_streams); 
 // Return 0 on success (negative on failure).
 int MPW_DestroyPath(int path);
