@@ -1019,7 +1019,10 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
   for(int i=0; i<num_channels; i++){
       ta[channel[i]].sendsize = totalsendsize;
       ta[channel[i]].recvsize = maxrecvsize;
+    
+      // NOTE: after this function ends, this will be a dangling pointer
       ta[channel[i]].dyn_recvsize = &dyn_recvsize; //one recvsize stored centrally. Read in by thread 0.
+    
       ta[channel[i]].channel = channel[i];
       ta[channel[i]].sendbuf = sendbuf[i];
       ta[channel[i]].recvbuf = recvbuf;
