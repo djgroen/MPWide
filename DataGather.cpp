@@ -139,7 +139,7 @@ int main(int argc, char** argv){
   /* Define 8 different streams */
   int size = 4;
 
-  string hosts[size]; // = {host,host,host,host,host,host,host,host};
+  string *hosts = new string[size]; // = {host,host,host,host,host,host,host,host};
   int sports[size];    // = {6000,6001,6002,6003,6004,6005,6006,6007};
   int cports[size];
   int channel[size];
@@ -153,6 +153,7 @@ int main(int argc, char** argv){
 
   //  MPW_Init(hosts,sports,cports,flags,size);
   MPW_Init(hosts,sports,size);
+  delete [] hosts;
 
   if(flag) { //client mode
     while(true) {

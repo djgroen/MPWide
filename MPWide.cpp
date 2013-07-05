@@ -585,11 +585,12 @@ void MPW_Init(string url, int port) {
 extern "C" {
   void MPW_Init_c (char** url, int* ports, int numstreams) 
   {
-    string urls[numstreams];
+    string* urls = new string[numstreams];
     for(int i=0;i<numstreams;i++) {
       urls[i].assign(url[i]);
     }
     MPW_Init(urls,ports,numstreams);
+    delete [] urls;
   }
 
   void MPW_Init1_c (char* url, int port)

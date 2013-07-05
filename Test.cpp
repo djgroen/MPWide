@@ -62,17 +62,17 @@ int main(int argc, char** argv){
     winsize = atoi(argv[5]);
   }
 
-  string hosts[size];
+//  string *hosts = new string[size];
 //  int sports[size];   
 
-  for(int i=0; i<size; i++) {
-    hosts[i] = host;
+//  for(int i=0; i<size; i++) {
+//    hosts[i] = host;
 //    sports[i] = 16256+i;
-  }
+//  }
 
   int path_id = MPW_CreatePath(host, 16256, size); ///path version
 //  MPW_Init(hosts, sports, size); ///non-path version.
-
+//  delete [] hosts;
   cerr << "\nSmall test completed, now commencing large test.\n" << endl;
 
 

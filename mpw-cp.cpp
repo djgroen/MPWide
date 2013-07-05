@@ -163,7 +163,7 @@ int main(int argc, char** argv){
     size = atoi(argv[4]);
   }
 
-  string hosts[size]; // = {host,host,host,host,host,host,host,host};
+  string *hosts = new string[size]; // = {host,host,host,host,host,host,host,host};
   int sports[size];    // = {6000,6001,6002,6003,6004,6005,6006,6007};
   int cports[size];
   int channel[size];
@@ -184,6 +184,8 @@ int main(int argc, char** argv){
 #else
   MPW_Init(hosts,sports,size);
 #endif
+
+  delete [] hosts;
 
   if(argc>6) {
     long long int pr  = atoi(argv[5]) * 1024*1024;
