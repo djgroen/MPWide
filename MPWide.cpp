@@ -461,10 +461,8 @@ void MPW_Init(string* url, int* ports, int* cports, int numstreams)
   MPW_InitStreams(stream_indices, numstreams);
 }
 
-/*
-  Constructs AND initializes a path.
-  Return path id or negative error value. */
-int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) {
+/* Constructs a path. Return path id or negative error value. */
+int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int streams_in_path) {
   int path_ports[streams_in_path];
   int path_cports[streams_in_path];
   string *hosts = new string[streams_in_path];
@@ -478,7 +476,7 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
 
   /* Add Path to paths Vector. */
   paths.push_back(MPWPath(host, stream_indices, streams_in_path));
-
+  int path_id = paths.size()-1;
   MPW_AddStreams(hosts, path_ports, path_cports, streams_in_path);
 
   #if PERF_REPORT > 0
@@ -487,16 +485,26 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
     #if PERF_REPORT > 1
     for(int i=0; i<streams_in_path; i++) {
       cout << "Stream[" << i << "]: " << paths[paths.size()-1].streams[i] << endl;
-    }  
+    } 
     #endif
   #endif
 
-  MPW_InitStreams(paths[paths.size()-1].streams, paths[paths.size()-1].num_streams);
-
-  //delete hosts;
-
   /* Return the identifier for the MPWPath we just created. */
-  return paths.size()-1;
+  return path_id;
+}
+
+/* Connects a path. */
+int MPW_ConnectPath(int path_id) {
+  MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams);
+  return 0;
+}
+
+/* Creates and connects a path */
+int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) {
+
+  int path_id = MPW_CreatePathWithoutConnect(host, server_side_base_port, streams_in_path);
+  MPW_ConnectPath(path_id);
+  return path_id;
 }
 
 void DecrementStreamIndices(int q) {
