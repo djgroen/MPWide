@@ -1042,14 +1042,13 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 
 #ifdef PERF_TIMING
   t = GetTime() - t;
-#endif
-
+  
+  #if PERF_REPORT>0
   long long int total_size = totalsendsize + dyn_recvsize;
 
-#ifdef PERF_TIMING
-  #if PERF_REPORT>0
   cout << "DSendRecv: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
   #endif
+  
   SendRecvTime += t;
 #endif
 
@@ -1066,14 +1065,14 @@ void MPW_splitBuf(char* buf, long long int bsize, int num_chunks, char** split_b
     LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.")
     exit(0);
   }
-  long long int bsize_each = bsize / num_chunks;
+  size_t bsize_each = size_t(bsize / num_chunks);
   int bsize_each_odd = bsize % num_chunks;
-  long long int offset = 0;
-  int ii = 0;
+  size_t offset = 0;
+  size_t ii = 0;
 
   for(int i=0; i<num_chunks; i++) {
     ii = bsize_each;
-    if( i < bsize_each_odd)  ii ++;
+    if(i < bsize_each_odd)  ii ++;
     split_buf[i] = &buf[offset];
     chunk_sizes[i] = ii;
     offset += ii;
@@ -1097,7 +1096,7 @@ long long int MPW_DSendRecv( char *sendbuf, long long int sendsize,
 }
 
 /* Low-level command */
-long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, long long int maxrecvsize2, int* ch_send, int nc_send, int* ch_recv, int nc_recv, bool dynamic) {
+long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, long long int maxrecvsize2, int* ch_send, int nc_send, int* ch_recv, int nc_recv, bool dynamic) {
   #ifdef PERF_TIMING
   double t = GetTime();
   #endif
@@ -1106,10 +1105,7 @@ long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, l
   char dummy_send[nc_send][1];
 
   long long int totalsendsize = sendsize2;
-
   long long int dyn_recvsize_sendchannel = 0; 
-  long long int dyn_recvsize_recvchannel = 0; 
-
   long long int recv_offset = 0; //only if !dynamic
 
   //TODO: Add support for different number of send/recv streams.
@@ -1188,13 +1184,9 @@ long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, l
 
   #ifdef PERF_TIMING
   t = GetTime() - t;
-  #endif
 
-  long long int total_size = 0;
-  total_size     = sendsize2 + dyn_recvsize_recvchannel;
-
-  #ifdef PERF_TIMING
     #if PERF_REPORT>0
+      long long int total_size = sendsize2 + dyn_recvsize_recvchannel;
       cout << "Cycle: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
     SendRecvTime += t;
@@ -1287,12 +1279,12 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
 
   #ifdef PERF_TIMING
     t = GetTime() - t;
-    long long int total_size = 0;
-    for(int i=0;i<num_channels;i++) {
-      total_size += sendsize[i]+recvsize[i];
-    }
 
     #if PERF_REPORT>0
+      long long int total_size = 0;
+      for(int i=0;i<num_channels;i++) {
+        total_size += sendsize[i]+recvsize[i];
+      }
       cout << "PSendRecv: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
     SendRecvTime += t;
@@ -1308,8 +1300,8 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
   }
 #endif
 
-  long long int sendsize_each = sendsize / nc;
-  long long int recvsize_each = recvsize / nc;
+  size_t sendsize_each = size_t(sendsize / nc);
+  size_t recvsize_each = size_t(recvsize / nc);
 
   int sendsize_each_odd = sendsize % nc;
   int recvsize_each_odd = recvsize % nc;
@@ -1319,10 +1311,10 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
   long long int *sendsize2 = new long long int[nc];
   long long int *recvsize2 = new long long int[nc];
   
-  int offset = 0;
-  int offset2 = 0;
-  int ii=0;
-  int iii=0;
+  size_t offset = 0;
+  size_t offset2 = 0;
+  size_t ii=0;
+  size_t iii=0;
   
   for( int i=0; i<nc; i++){
     ii = sendsize_each;
@@ -1365,8 +1357,7 @@ void MPW_Barrier(int channel)
     client[i].send(s,8);
   }
   #ifdef PERF_TIMING
-    t = GetTime() - t;
-    BarrierTime += t;
+    BarrierTime += GetTime() - t;
   #endif
 }
 
