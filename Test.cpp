@@ -52,15 +52,17 @@ int main(int argc, char** argv){
     bufsize = atoi(argv[3]);
   }
 
-  if(argc>4) {
-    MPW_setAutoTuning(false);
-    MPW_setPacingRate((atoi(argv[4]))*1024*1024);
-  }
+  int is_server = atoi(argv[4]);
+
+//  if(argc>4) {
+//    MPW_setAutoTuning(false);
+//    MPW_setPacingRate((atoi(argv[4]))*1024*1024);
+//  }
 
   int winsize = 16*1024*1024;
-  if(argc>5) {
-    winsize = atoi(argv[5]);
-  }
+//  if(argc>5) {
+//    winsize = atoi(argv[5]);
+//  }
 
 //  string *hosts = new string[size];
 //  int sports[size];   
@@ -71,7 +73,12 @@ int main(int argc, char** argv){
 //  }
 
   int path_id = MPW_CreatePathWithoutConnect(host, 16256, size); ///path version
-  int status  = MPW_ConnectPath(path_id, true);
+  if(is_server == 1) {
+    int status  = MPW_ConnectPath(path_id, true);
+  }
+  else {
+    int status  = MPW_ConnectPath(path_id, false);
+  }
 //  MPW_Init(hosts, sports, size); ///non-path version.
 //  delete [] hosts;
   cerr << "\nSmall test completed, now commencing large test.\n" << endl;
@@ -89,14 +96,22 @@ int main(int argc, char** argv){
     MPW_setWin(i,winsize);
   }
 
-  int comm_mode = 1; //0 for regular sendrecv tests, 1 for non-blocking sendrecv tests.
+  int comm_mode = 0; //0 for regular sendrecv tests, 1 for non-blocking sendrecv tests.
 
   /* test loop */
   for(int i=0; i<20; i++) {
 
 //    MPW_SendRecv(msg,len,msg2,len,channels,size); ///non-path version.
     if(comm_mode==0) {
-      MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
+      //MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
+      if(is_server == 0) {
+        MPW_SendRecv(msg,1,msg2,len,path_id);
+        MPW_SendRecv(msg,len,msg2,1,path_id);
+      }
+      else {
+        MPW_SendRecv(msg,len,msg2,1,path_id);
+        MPW_SendRecv(msg,1,msg2,len,path_id);
+      }
     }
     else if(comm_mode == 1) {
       int id = MPW_ISendRecv(msg,len,msg2,len,path_id);

@@ -353,7 +353,6 @@ bool Socket::connect ( const string host, const int port )
     return false;
   }   
 
-//  set_non_blocking(false);
   int write = select_me(1,1);
   set_non_blocking(false);
 
