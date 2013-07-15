@@ -1,0 +1,365 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A417F27C1781C89700653B10 /* MPWide.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A417F25B1781C7CF00653B10 /* MPWide.cpp */; };
+		A417F27D1781C89700653B10 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A417F26F1781C7CF00653B10 /* Socket.cpp */; };
+		A417F27E1781C8A000653B10 /* MPWide.h in Headers */ = {isa = PBXBuildFile; fileRef = A417F25C1781C7CF00653B10 /* MPWide.h */; };
+		A417F27F1781C8A000653B10 /* Socket.h in Headers */ = {isa = PBXBuildFile; fileRef = A417F2701781C7CF00653B10 /* Socket.h */; };
+		A417F28D1781C8F700653B10 /* libMPW.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A417F2771781C88300653B10 /* libMPW.a */; };
+		A417F28E1781C91D00653B10 /* Test.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A417F2711781C7CF00653B10 /* Test.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A417F2821781C8EE00653B10 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A417F2571781C7CE00653B10 /* DataGather.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = DataGather.cpp; sourceTree = "<group>"; };
+		A417F2581781C7CE00653B10 /* Forwarder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Forwarder.cpp; sourceTree = "<group>"; };
+		A417F2591781C7CE00653B10 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		A417F25A1781C7CF00653B10 /* mpw-cp.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = "mpw-cp.cpp"; sourceTree = "<group>"; };
+		A417F25B1781C7CF00653B10 /* MPWide.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MPWide.cpp; sourceTree = "<group>"; };
+		A417F25C1781C7CF00653B10 /* MPWide.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MPWide.h; sourceTree = "<group>"; };
+		A417F25E1781C7CF00653B10 /* _MPWide.so */ = {isa = PBXFileReference; lastKnownFileType = file; path = _MPWide.so; sourceTree = "<group>"; };
+		A417F2601781C7CF00653B10 /* MPWide.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = MPWide.o; sourceTree = "<group>"; };
+		A417F2611781C7CF00653B10 /* Socket.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = Socket.o; sourceTree = "<group>"; };
+		A417F2631781C7CF00653B10 /* MPWide_wrap.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = MPWide_wrap.o; sourceTree = "<group>"; };
+		A417F2651781C7CF00653B10 /* MPWide_wrap.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = MPWide_wrap.o; sourceTree = "<group>"; };
+		A417F2661781C7CF00653B10 /* compile.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = compile.sh; sourceTree = "<group>"; };
+		A417F2671781C7CF00653B10 /* MPWide.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = MPWide.i; sourceTree = "<group>"; };
+		A417F2681781C7CF00653B10 /* MPWide.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = MPWide.py; sourceTree = "<group>"; };
+		A417F2691781C7CF00653B10 /* MPWide.pyc */ = {isa = PBXFileReference; lastKnownFileType = file; path = MPWide.pyc; sourceTree = "<group>"; };
+		A417F26A1781C7CF00653B10 /* MPWide_wrap.cxx */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MPWide_wrap.cxx; sourceTree = "<group>"; };
+		A417F26B1781C7CF00653B10 /* MPWTest.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = MPWTest.py; sourceTree = "<group>"; };
+		A417F26C1781C7CF00653B10 /* README */ = {isa = PBXFileReference; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
+		A417F26D1781C7CF00653B10 /* setup.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = setup.py; sourceTree = "<group>"; };
+		A417F26E1781C7CF00653B10 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = text; path = README.md; sourceTree = "<group>"; };
+		A417F26F1781C7CF00653B10 /* Socket.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Socket.cpp; sourceTree = "<group>"; };
+		A417F2701781C7CF00653B10 /* Socket.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Socket.h; sourceTree = "<group>"; };
+		A417F2711781C7CF00653B10 /* Test.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Test.cpp; sourceTree = "<group>"; };
+		A417F2721781C7CF00653B10 /* TestRestart.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = TestRestart.cpp; sourceTree = "<group>"; };
+		A417F2771781C88300653B10 /* libMPW.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libMPW.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		A417F2841781C8EE00653B10 /* MPWTest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MPWTest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A417F2741781C88300653B10 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A417F2811781C8EE00653B10 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A417F28D1781C8F700653B10 /* libMPW.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A417F25D1781C7CF00653B10 /* python */ = {
+			isa = PBXGroup;
+			children = (
+				A417F25E1781C7CF00653B10 /* _MPWide.so */,
+				A417F25F1781C7CF00653B10 /* build */,
+				A417F2661781C7CF00653B10 /* compile.sh */,
+				A417F2671781C7CF00653B10 /* MPWide.i */,
+				A417F2681781C7CF00653B10 /* MPWide.py */,
+				A417F2691781C7CF00653B10 /* MPWide.pyc */,
+				A417F26A1781C7CF00653B10 /* MPWide_wrap.cxx */,
+				A417F26B1781C7CF00653B10 /* MPWTest.py */,
+				A417F26C1781C7CF00653B10 /* README */,
+				A417F26D1781C7CF00653B10 /* setup.py */,
+			);
+			path = python;
+			sourceTree = "<group>";
+		};
+		A417F25F1781C7CF00653B10 /* build */ = {
+			isa = PBXGroup;
+			children = (
+				A417F2601781C7CF00653B10 /* MPWide.o */,
+				A417F2611781C7CF00653B10 /* Socket.o */,
+				A417F2621781C7CF00653B10 /* temp.linux-x86_64-2.6 */,
+				A417F2641781C7CF00653B10 /* temp.linux-x86_64-2.7 */,
+			);
+			path = build;
+			sourceTree = "<group>";
+		};
+		A417F2621781C7CF00653B10 /* temp.linux-x86_64-2.6 */ = {
+			isa = PBXGroup;
+			children = (
+				A417F2631781C7CF00653B10 /* MPWide_wrap.o */,
+			);
+			path = "temp.linux-x86_64-2.6";
+			sourceTree = "<group>";
+		};
+		A417F2641781C7CF00653B10 /* temp.linux-x86_64-2.7 */ = {
+			isa = PBXGroup;
+			children = (
+				A417F2651781C7CF00653B10 /* MPWide_wrap.o */,
+			);
+			path = "temp.linux-x86_64-2.7";
+			sourceTree = "<group>";
+		};
+		A417F2781781C88300653B10 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A417F2771781C88300653B10 /* libMPW.a */,
+				A417F2841781C8EE00653B10 /* MPWTest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A4D746371781C75D00BF5E95 = {
+			isa = PBXGroup;
+			children = (
+				A417F2571781C7CE00653B10 /* DataGather.cpp */,
+				A417F2581781C7CE00653B10 /* Forwarder.cpp */,
+				A417F2591781C7CE00653B10 /* Makefile */,
+				A417F25A1781C7CF00653B10 /* mpw-cp.cpp */,
+				A417F25B1781C7CF00653B10 /* MPWide.cpp */,
+				A417F25C1781C7CF00653B10 /* MPWide.h */,
+				A417F25D1781C7CF00653B10 /* python */,
+				A417F26E1781C7CF00653B10 /* README.md */,
+				A417F26F1781C7CF00653B10 /* Socket.cpp */,
+				A417F2701781C7CF00653B10 /* Socket.h */,
+				A417F2711781C7CF00653B10 /* Test.cpp */,
+				A417F2721781C7CF00653B10 /* TestRestart.cpp */,
+				A417F2781781C88300653B10 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		A417F2751781C88300653B10 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A417F27E1781C8A000653B10 /* MPWide.h in Headers */,
+				A417F27F1781C8A000653B10 /* Socket.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		A417F2761781C88300653B10 /* MPW */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A417F2791781C88300653B10 /* Build configuration list for PBXNativeTarget "MPW" */;
+			buildPhases = (
+				A417F2731781C88300653B10 /* Sources */,
+				A417F2741781C88300653B10 /* Frameworks */,
+				A417F2751781C88300653B10 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MPW;
+			productName = MPW;
+			productReference = A417F2771781C88300653B10 /* libMPW.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		A417F2831781C8EE00653B10 /* MPWTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A417F28A1781C8EE00653B10 /* Build configuration list for PBXNativeTarget "MPWTest" */;
+			buildPhases = (
+				A417F2801781C8EE00653B10 /* Sources */,
+				A417F2811781C8EE00653B10 /* Frameworks */,
+				A417F2821781C8EE00653B10 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MPWTest;
+			productName = MPWTest;
+			productReference = A417F2841781C8EE00653B10 /* MPWTest */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A4D746381781C75D00BF5E95 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0460;
+				ORGANIZATIONNAME = "Derek Groen";
+			};
+			buildConfigurationList = A4D7463B1781C75D00BF5E95 /* Build configuration list for PBXProject "MPWide" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = A4D746371781C75D00BF5E95;
+			productRefGroup = A417F2781781C88300653B10 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A417F2761781C88300653B10 /* MPW */,
+				A417F2831781C8EE00653B10 /* MPWTest */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A417F2731781C88300653B10 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A417F27C1781C89700653B10 /* MPWide.cpp in Sources */,
+				A417F27D1781C89700653B10 /* Socket.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A417F2801781C8EE00653B10 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A417F28E1781C91D00653B10 /* Test.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A417F27A1781C88300653B10 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		A417F27B1781C88300653B10 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		A417F28B1781C8EE00653B10 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		A417F28C1781C8EE00653B10 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		A4D7463D1781C75D00BF5E95 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A4D7463E1781C75D00BF5E95 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A417F2791781C88300653B10 /* Build configuration list for PBXNativeTarget "MPW" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A417F27A1781C88300653B10 /* Debug */,
+				A417F27B1781C88300653B10 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		A417F28A1781C8EE00653B10 /* Build configuration list for PBXNativeTarget "MPWTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A417F28B1781C8EE00653B10 /* Debug */,
+				A417F28C1781C8EE00653B10 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+		A4D7463B1781C75D00BF5E95 /* Build configuration list for PBXProject "MPWide" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A4D7463D1781C75D00BF5E95 /* Debug */,
+				A4D7463E1781C75D00BF5E95 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A4D746381781C75D00BF5E95 /* Project object */;
+}
