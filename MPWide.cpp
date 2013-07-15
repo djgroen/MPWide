@@ -24,6 +24,7 @@
 #include "MPWide.h"
 #include <errno.h>
 #include "Socket.h"
+#include "serialization.h"
 #include <sys/time.h>
 #include <pthread.h>
 #include <cstdlib>
@@ -42,15 +43,45 @@ void MPW_setAutoTuning(bool b) {
   }
 }
 
-/* Enable(1)/Disable(0) Performance Timing Measurements */
-#define PERF_TIMING 1
+/* Enable (define)/Disable(don't define) Performance Timing Measurements */
+#define PERF_TIMING
 /* Performance report verbosity: 1 reports speeds on send/recv. 2 reports on initialization details.
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
 #define PERF_REPORT 1
+#define LVL_ERR 0
+#define LVL_WARN 2
+#define LVL_INFO 4
+#define LVL_DEBUG 6
+#define LVL_TRACE 8
 #define MONITORING 1
 
-#define min(X,Y)   (X < Y ? X : Y)
+#define LOG_LVL LVL_INFO
+
+#if LOG_LVL >= LVL_ERR
+#define LOG_ERR(MSG) cout << MSG << endl;
+#else
+#define LOG_ERR(MSG)
+#endif
+#if LOG_LVL >= LVL_WARN
+#define LOG_WARN(MSG) cout << MSG << endl;
+#else
+#define LOG_WARN(MSG)
+#endif
+#if LOG_LVL >= LVL_INFO
+#define LOG_INFO(MSG) cout << MSG << endl;
+#else
+#define LOG_INFO(MSG)
+#endif
+#if LOG_LVL >= LVL_DEBUG
+#define LOG_DEBUG(MSG) cout << MSG << endl;
+#else
+#define LOG_DEBUG(MSG)
+#endif
+
+//#define MONITORING 1
+
+#define min(X,Y) ((X) < (Y) ? (X) : (Y))
 
 using namespace std;
 
@@ -73,15 +104,20 @@ class MPWPath {
     string remote_url; // end-point of the path
     int *streams; // id numbers of the streams used
     int num_streams; // number of streams
+    int *refs; // when refs reaches zero, delete streams
 
     MPWPath(string remote_url, int* str, int numstr)
-      :remote_url(remote_url), num_streams(numstr)
+      : remote_url(remote_url), num_streams(numstr)
     {
+      refs = new int(1);
       streams = new int[numstr];
-      for(int i=0; i<numstr; i++) {
-        streams[i] = str[i];
-      }
+      memcpy(streams, str, num_streams*sizeof(int));
     }
+    MPWPath(const MPWPath &other) : remote_url(other.remote_url), num_streams(other.num_streams), refs(other.refs), streams(other.streams)
+    {
+      (*refs)++;
+    }
+    ~MPWPath() { if (--(*refs) == 0) { delete refs; delete [] streams; } }
 };
 /* List of paths. */
 static vector<MPWPath> paths;
@@ -95,7 +131,7 @@ static int relay_rsize = 8*1024;
 
 #if PacingMode == 1
   static double pacing_rate = 100*1024*1024; //Pacing rate per stream.
-  static long long int pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
+  static useconds_t pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
 
   double MPW_getPacingRate() {
     return pacing_rate;
@@ -108,7 +144,7 @@ static int relay_rsize = 8*1024;
     else {
       pacing_rate = rate;
       pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
-      cout << "Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us." << endl;
+      LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.")
     }
   }
 #endif
@@ -139,23 +175,7 @@ static thread_tmp* ta;
   void MPW_setChunkSize(int sending, int receiving) {
     tcpbuf_ssize = sending;
     tcpbuf_rsize = receiving;
-    cout << "Chunk Size  modified to: " << sending << "/" << receiving << "." << endl;
-  }
-
-  long long int swapLLI( const long long int ll){
-    union ud{
-      char cval[8];
-      long long int llval;
-    }u;
-
-    u.llval = ll;
-
-    char tmp; //swaps...
-    tmp = u.cval[0]; u.cval[0] = u.cval[7]; u.cval[7] = tmp;
-    tmp = u.cval[1]; u.cval[1] = u.cval[6]; u.cval[6] = tmp;
-    tmp = u.cval[2]; u.cval[2] = u.cval[5]; u.cval[5] = tmp;
-    tmp = u.cval[3]; u.cval[3] = u.cval[4]; u.cval[4] = tmp;
-    return u.llval;
+    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".")
   }
 
   double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
@@ -187,14 +207,17 @@ char *MPW_DNSResolve(char *host){
   }
   if(host_info) {
     const in_addr* address = (in_addr*)host_info->h_addr_list[0] ;
-    cout << " address found: " << inet_ntoa( *address ) << endl;
+    LOG_DEBUG(" address found: " << inet_ntoa( *address ))
     host = (char*) (inet_ntoa(*address));
     return host;
   }
-  cout << "Error: Unable to resolve host name" << endl;
+  LOG_ERR("Error: Unable to resolve host name")
+  return NULL;
 }
 
 char *MPW_DNSResolve(string host) {
+  // TODO: Memory leak
+  // replace with: return MPW_DNSResolve((char *)host.c_str());
   char * l_host = new char[host.size() + 1];
   std::copy(host.begin(), host.end(), l_host);
   l_host[host.size()] = '\0';
@@ -235,7 +258,7 @@ int selectSockets(int wchannel, int rchannel, int mask)
     }
   }
   else if (ok<0){
-    cout << "socketSelect error: " << errno << endl; //" Msg: " << strerror(errno) << endl;
+    LOG_ERR("socketSelect error: " << errno); //" Msg: " << strerror(errno));
   }
   return access;
 }
@@ -247,6 +270,8 @@ int MPW_NumChannels(){
 long long int bytes_sent;
 bool stop_monitor = false;
 
+#ifdef PERF_TIMING
+#if MONITORING == 1
 /* Performs per-second bandwidth monitoring in real-time */
 void *MPW_TBandwidth_Monitor(void *args)
 {
@@ -268,6 +293,8 @@ void *MPW_TBandwidth_Monitor(void *args)
   myfile.close();
   return NULL;
 }
+#endif
+#endif
 
 typedef struct init_tmp {
   int i;
@@ -321,7 +348,7 @@ void* MPW_InitStream(void* args)
         if(connected) { isclient[i] = 0; } 
       }
       else {
-        cout << "Bind on ch #"<< i <<" failed: waiting for 1 s." << endl;
+        LOG_WARN("Bind on ch #"<< i <<" failed: waiting for 1 s.")
     	sleep(1);
       }
     }
@@ -333,7 +360,7 @@ void* MPW_InitStream(void* args)
 void MPW_CloseChannels(int* channel, int numchannels) 
 {
   for(int i=0; i<numchannels; i++) {
-    cout << "Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i] << endl;
+    LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i])
     client[channel[i]].close();
     if(!isclient[channel[i]]) {
       client[channel[i]].closeServer();
@@ -352,7 +379,7 @@ void MPW_ReOpenChannels(int* channel, int numchannels)
     t[i].i    = channel[i];
     t[i].port = port[channel[i]];
     t[i].cport = cport[channel[i]];
-    cout << "ReOpening client channel #" << channel[i] << " with port = " << port[channel[i]] << " and cport = " << cport[channel[i]] << endl;
+    LOG_INFO("ReOpening client channel #" << channel[i] << " with port = " << port[channel[i]] << " and cport = " << cport[channel[i]])
     int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
   }
 
@@ -366,7 +393,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
   num_streams += numstreams;
 
   for(int i = 0; i<numstreams; i++) {
-    cout << "MPW_DNSResolve resolves " << url[i] << " to address " << MPW_DNSResolve(url[i]) << "." << endl;
+    LOG_DEBUG("MPW_DNSResolve resolves " << url[i] << " to address " << MPW_DNSResolve(url[i]) << ".");
     remote_url.push_back(MPW_DNSResolve(url[i]));
     client.push_back(Socket());
     isclient.push_back(1);
@@ -380,7 +407,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     if(url[i].compare("0") == 0) {
       isclient[i] = 0;
       cport[i]    = -2;
-      cout << "Empty IP address given: Switching to Server-only mode." << endl;
+      LOG_INFO("Empty IP address given: Switching to Server-only mode.")
     }
   }
 }
@@ -418,22 +445,28 @@ void MPW_InitStreams(int *stream_indices, int numstreams) {
     }
   }
 
-  cout << "-----------------------------------------------------------" << endl;
-  cout << "MPWide Settings:" << endl;
-  cout << "Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize << endl;
-  cout << "Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize << endl;
-  cout << "Number of streams       : " << num_streams << endl;
-  cout << "tcp buffer parameter    : " << WINSIZE << endl;
-  cout << "pacing rate             : " << pacing_rate << " bytes/s." << endl;
-  cout << "bandwidth monitoring    : " << MONITORING << endl;
-  cout << "-----------------------------------------------------------" << endl;
-  cout << "END OF SETUP PHASE." << endl;
+  LOG_INFO("-----------------------------------------------------------")
+  LOG_INFO("MPWide Settings:")
+  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize)
+  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize)
+  LOG_INFO("Number of streams       : " << num_streams)
+  LOG_INFO("tcp buffer parameter    : " << WINSIZE)
+  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.")
+#ifdef MONITORING
+  LOG_INFO("bandwidth monitoring    : " << MONITORING)
+#else
+  LOG_INFO("bandwidth monitoring    : 0")
+#endif
+  LOG_INFO("-----------------------------------------------------------")
+  LOG_INFO("END OF SETUP PHASE.")
 
   if(MPW_INITIALISED == false) {
     MPW_INITIALISED = true;
+    #ifdef PERF_TIMING
     #if MONITORING == 1
     pthread_t monitor;
     int code = pthread_create(&monitor, NULL, MPW_TBandwidth_Monitor, NULL);
+    #endif
     #endif
     /* Allocate global thread memory */
     ta = (thread_tmp *) MPWmalloc( sizeof(thread_tmp) * num_streams);
@@ -465,6 +498,7 @@ void MPW_Init(string* url, int* ports, int* cports, int numstreams)
 int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int streams_in_path) {
   int path_ports[streams_in_path];
   int path_cports[streams_in_path];
+  // TODO: memory leak?
   string *hosts = new string[streams_in_path];
   int stream_indices[streams_in_path];
   for(int i=0; i<streams_in_path; i++) {
@@ -478,6 +512,9 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
   paths.push_back(MPWPath(host, stream_indices, streams_in_path));
   int path_id = paths.size()-1;
   MPW_AddStreams(hosts, path_ports, path_cports, streams_in_path);
+
+  // TODO: this was commented, can we uncomment it to prevent a memory leak?
+  //delete [] hosts;
 
   #if PERF_REPORT > 0
   cout << "Creating New Path:" << endl;
@@ -834,7 +871,7 @@ void MPW_Relay(int* channels, int* channels2, int num_channels) {
 void *MPW_TDynEx(void *args)
 {
 //  cout << "TDynEx." << endl;
-  double t = GetTime();
+//  double t = GetTime();
   bool cycling = false;
   thread_tmp *ta = (thread_tmp *)args;
 
@@ -868,11 +905,12 @@ void *MPW_TDynEx(void *args)
   cout << "TDynEx(sendsize="<<sendsize<<",maxrecvsize="<<maxrecvsize<<",ch_send="<<channel<<",ch_recv="<<channel2<<",nc="<<numschannels<<"/"<<numrchannels<<endl;
   #endif
 
-  long long int size_found = -1;
+  unsigned char net_size_found[8], net_send_size[8];
   long long int recvsizeall = -1;
-
-  long long int a,b,c,d;
-  a = b = c = d = 0;
+  size_t a, b;
+  long long int c,d;
+  a = b = 0;
+  c = d = 0;
 
   // recvsize is initially set to the size of the long long int which holds the message size.
   bool recv_settings_known = false;   //this thread knows how much data may be received.
@@ -891,13 +929,11 @@ void *MPW_TDynEx(void *args)
     /* (1.) Receiving is possible, but only done by thread 0 until we know more. */
     if(mode%2 == 1) {
       if(!recv_settings_known) {
-        int n = client[channel2].irecv(((char*) (&size_found))+b,8-b); 
+        int n = client[channel2].irecv((char *)net_size_found+b,8-b);
         b += n;
 
         if(b == 8) { //recvsize data is now available.
-          #ifdef EndianConvert
-          size_found = swapLLI(size_found);
-          #endif
+          size_t size_found = ::deserialize_size_t(net_size_found);
 
           if (size_found > maxrecvsize) { //Would we want to do reallocs here???
             cerr << "ERROR: DynEx recv size is greater than given constraint." << endl;
@@ -937,12 +973,8 @@ void *MPW_TDynEx(void *args)
     /* SENDING POSSIBLE */
     if(mode/2==1) {
       if(a<8) { //send size first.
-        long long int tmpsize = totalsendsize;
-
-        #ifdef EndianConvert
-        tmpsize = swapLLI(tmpsize);
-        #endif
-        int n = client[channel].isend(((char*) (&tmpsize))+a,8-a);
+        ::serialize_size_t(net_send_size, (const size_t)totalsendsize);
+        int n = client[channel].isend((char*)net_send_size + a,8-a);
         a += n;
       }
       else { //send data after that, leave 16byte margin to prevent SendRecv from crashing.
@@ -998,7 +1030,10 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
   for(int i=0; i<num_channels; i++){
       ta[channel[i]].sendsize = totalsendsize;
       ta[channel[i]].recvsize = maxrecvsize;
+    
+      // NOTE: after this function ends, this will be a dangling pointer
       ta[channel[i]].dyn_recvsize = &dyn_recvsize; //one recvsize stored centrally. Read in by thread 0.
+    
       ta[channel[i]].channel = channel[i];
       ta[channel[i]].sendbuf = sendbuf[i];
       ta[channel[i]].recvbuf = recvbuf;
@@ -1018,14 +1053,13 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 
 #ifdef PERF_TIMING
   t = GetTime() - t;
-#endif
-
+  
+  #if PERF_REPORT>0
   long long int total_size = totalsendsize + dyn_recvsize;
 
-#ifdef PERF_TIMING
-  #if PERF_REPORT>0
   cout << "DSendRecv: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
   #endif
+  
   SendRecvTime += t;
 #endif
 
@@ -1039,17 +1073,17 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 void MPW_splitBuf(char* buf, long long int bsize, int num_chunks, char** split_buf, long long int* chunk_sizes) {
 
   if(num_chunks < 1) { 
-    cout << "ERROR: MPW_splitBuf is about to split into 0 chunks." << endl;
+    LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.")
     exit(0);
   }
-  long long int bsize_each = bsize / num_chunks;
+  size_t bsize_each = size_t(bsize / num_chunks);
   int bsize_each_odd = bsize % num_chunks;
-  long long int offset = 0;
-  int ii = 0;
+  size_t offset = 0;
+  size_t ii = 0;
 
   for(int i=0; i<num_chunks; i++) {
     ii = bsize_each;
-    if( i < bsize_each_odd)  ii ++;
+    if(i < bsize_each_odd)  ii ++;
     split_buf[i] = &buf[offset];
     chunk_sizes[i] = ii;
     offset += ii;
@@ -1073,7 +1107,7 @@ long long int MPW_DSendRecv( char *sendbuf, long long int sendsize,
 }
 
 /* Low-level command */
-long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, long long int maxrecvsize2, int* ch_send, int nc_send, int* ch_recv, int nc_recv, bool dynamic) {
+long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, long long int maxrecvsize2, int* ch_send, int nc_send, int* ch_recv, int nc_recv, bool dynamic) {
   #ifdef PERF_TIMING
   double t = GetTime();
   #endif
@@ -1082,10 +1116,7 @@ long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, l
   char dummy_send[nc_send][1];
 
   long long int totalsendsize = sendsize2;
-
   long long int dyn_recvsize_sendchannel = 0; 
-  long long int dyn_recvsize_recvchannel = 0; 
-
   long long int recv_offset = 0; //only if !dynamic
 
   //TODO: Add support for different number of send/recv streams.
@@ -1164,13 +1195,9 @@ long long int Cycle(char**  sendbuf2, long long int sendsize2, char* recvbuf2, l
 
   #ifdef PERF_TIMING
   t = GetTime() - t;
-  #endif
 
-  long long int total_size = 0;
-  total_size     = sendsize2 + dyn_recvsize_recvchannel;
-
-  #ifdef PERF_TIMING
     #if PERF_REPORT>0
+      long long int total_size = sendsize2 + dyn_recvsize_recvchannel;
       cout << "Cycle: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
     SendRecvTime += t;
@@ -1263,12 +1290,12 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
 
   #ifdef PERF_TIMING
     t = GetTime() - t;
-    long long int total_size = 0;
-    for(int i=0;i<num_channels;i++) {
-      total_size += sendsize[i]+recvsize[i];
-    }
 
     #if PERF_REPORT>0
+      long long int total_size = 0;
+      for(int i=0;i<num_channels;i++) {
+        total_size += sendsize[i]+recvsize[i];
+      }
       cout << "PSendRecv: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
     SendRecvTime += t;
@@ -1284,8 +1311,8 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
   }
 #endif
 
-  long long int sendsize_each = sendsize / nc;
-  long long int recvsize_each = recvsize / nc;
+  size_t sendsize_each = size_t(sendsize / nc);
+  size_t recvsize_each = size_t(recvsize / nc);
 
   int sendsize_each_odd = sendsize % nc;
   int recvsize_each_odd = recvsize % nc;
@@ -1295,10 +1322,10 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
   long long int *sendsize2 = new long long int[nc];
   long long int *recvsize2 = new long long int[nc];
   
-  int offset = 0;
-  int offset2 = 0;
-  int ii=0;
-  int iii=0;
+  size_t offset = 0;
+  size_t offset2 = 0;
+  size_t ii=0;
+  size_t iii=0;
   
   for( int i=0; i<nc; i++){
     ii = sendsize_each;
@@ -1341,8 +1368,7 @@ void MPW_Barrier(int channel)
     client[i].send(s,8);
   }
   #ifdef PERF_TIMING
-    t = GetTime() - t;
-    BarrierTime += t;
+    BarrierTime += GetTime() - t;
   #endif
 }
 
