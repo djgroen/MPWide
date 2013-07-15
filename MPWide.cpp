@@ -700,11 +700,10 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
   bool rdone = false;
   bool wdone = false;
 
+  int mask = 0;
   while((a < sendsize) || (b < recvsize)) {
 
-    int mode = 0;
-    int mask = 0;
-    mode = selectSockets(channel,channel2,mask);
+    int mode = selectSockets(channel,channel2,mask);
 
     if(!rdone && (mode%2==1)) {
       if((recvsize-b)) {
@@ -918,7 +917,6 @@ void *MPW_TDynEx(void *args)
   // recvsize is initially set to the size of the long long int which holds the message size.
   bool recv_settings_known = false;   //this thread knows how much data may be received.
   int mask = 0;
-  int mode = 0;
   long long int offset_r = 0; //stores correct recv buffer offset for this thread.
 
   /* Second: await the recvsize */
@@ -927,7 +925,7 @@ void *MPW_TDynEx(void *args)
 //  cout << "Receiving size from channel " << channel2 << ", id: " << id << ", numrchannels: " << numrchannels << endl;
 
   while(recvsize > d || sendsize > c) {
-    mode = selectSockets(channel,channel2,mask);
+    int mode = selectSockets(channel,channel2,mask);
 
     /* (1.) Receiving is possible, but only done by thread 0 until we know more. */
     if(mode%2 == 1) {
