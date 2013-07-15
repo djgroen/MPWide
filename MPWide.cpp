@@ -301,6 +301,7 @@ typedef struct init_tmp {
   int port;
   int cport;
   bool server_wait;
+  bool connected;
 }init_tmp;
 
 void* MPW_InitStream(void* args) 
@@ -310,7 +311,6 @@ void* MPW_InitStream(void* args)
   int i = t.i;
   int port = t.port;
   int cport = t.cport;
-  bool connected = false;
   bool server_wait = t.server_wait;
   client[i].set_non_blocking(false);
 
@@ -325,13 +325,24 @@ void* MPW_InitStream(void* args)
     }
 
     /* End of patch*/
-    connected = client[i].connect(remote_url[i],port);
+    t.connected = client[i].connect(remote_url[i],port);
+    #if InitStreamTimeOut > 0
+      long long connect_counter = 0;
+    #endif
+    if(server_wait == false && !t.connected) {
+      t.connected = client[i].connect(remote_url[i],port);
+      usleep(10000);
+      #if InitStreamTimeOut > 0
+        connect_counter += 10;
+        if(connect_counter >= InitStreamTimeOut) { break; }
+      #endif
+    }
     #if PERF_REPORT > 1
-      cout << "[" << i << "] Attempt to connect as client: " << connected << endl;
+      cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  " :" << t.connected << endl;
     #endif
   }
  
-  if(!connected) {
+  if(!t.connected) {
     client[i].close();
     if(server_wait) {
       client[i].create();
@@ -341,14 +352,14 @@ void* MPW_InitStream(void* args)
       #endif
 
       if(bound > 0) {
-        while(!connected) {
+        while(!t.connected) {
           client[i].listen();
-          connected = client[i].accept(client[i]);
+          t.connected = client[i].accept(client[i]);
         }
         #if PERF_REPORT > 1 
-          cout <<  "[" << i << "] Attempt to act as server: " << connected << endl;
+          cout <<  "[" << i << "] Attempt to act as server: " << t.connected << endl;
         #endif
-        if(connected) { isclient[i] = 0; } 
+        if(t.connected) { isclient[i] = 0; } 
       }
       else {
         LOG_WARN("Bind on ch #"<< i <<" failed.");
@@ -407,7 +418,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
       cout << url[i] << " " << ports[i] << " " << cports[i] << endl;
     #endif
 
-    if(url[i].compare("0") == 0) {
+    if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
       isclient[i] = 0;
       cport[i]    = -2;
       LOG_INFO("Empty IP address given: Switching to Server-only mode.")
@@ -415,7 +426,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
   }
 }
 
-void MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
+int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   pthread_t streams[numstreams];
   init_tmp t[numstreams];
 
@@ -424,6 +435,7 @@ void MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
     t[i].port = port[i];
     t[i].cport = cport[i];
     t[i].server_wait = server_wait;
+    t[i].connected = false;
     if(i>0) {
       int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
     }
@@ -434,6 +446,22 @@ void MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   for(int i = 1; i < numstreams; i++) {
     pthread_join(streams[i], NULL);
   }
+
+  /* Error handling code (in case MPW_InitStream times out for one or more */
+  /*bool all_connected = true;
+  for(int i = 0; i < numstreams; i++) {
+    if(t[i].connected == false) {
+      all_connected = false;
+    }
+  }
+  if(!all_connected) {
+    for(int i = 0; i < numstreams; i++) {
+      if(t[i].connected == true) {
+        client[t[i].i].close();
+      }
+    }
+    return -1;
+  }*/
 
   if(MPWideAutoTune == 1) {
     for(unsigned int i=0; i<paths.size(); i++) {
@@ -478,6 +506,7 @@ void MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   else {
     ta = (thread_tmp *) realloc(ta, sizeof(thread_tmp) * num_streams);
   }
+  return 0;
 }
 
 /* Initialize the MPWide. set client to 1 for one machine, and to 0 for the other. */
