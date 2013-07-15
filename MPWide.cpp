@@ -307,6 +307,7 @@ typedef struct init_tmp {
 void* MPW_InitStream(void* args) 
 {
   init_tmp t = *((init_tmp *) args);
+  init_tmp *pt = ((init_tmp *) args);
 
   int i = t.i;
   int port = t.port;
@@ -325,12 +326,13 @@ void* MPW_InitStream(void* args)
     }
 
     /* End of patch*/
-    t.connected = client[i].connect(remote_url[i],port);
+    pt->connected = client[i].connect(remote_url[i],port);
     #if InitStreamTimeOut > 0
       long long connect_counter = 0;
     #endif
-    if(server_wait == false && !t.connected) {
-      t.connected = client[i].connect(remote_url[i],port);
+    LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
+    while(server_wait == false && !pt->connected) {
+      pt->connected = client[i].connect(remote_url[i],port);
       usleep(10000);
       #if InitStreamTimeOut > 0
         connect_counter += 10;
@@ -338,11 +340,11 @@ void* MPW_InitStream(void* args)
       #endif
     }
     #if PERF_REPORT > 1
-      cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  " :" << t.connected << endl;
+      cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  " :" << pt->connected << endl;
     #endif
   }
  
-  if(!t.connected) {
+  if(!pt->connected) {
     client[i].close();
     if(server_wait) {
       client[i].create();
@@ -352,14 +354,14 @@ void* MPW_InitStream(void* args)
       #endif
 
       if(bound > 0) {
-        while(!t.connected) {
+        while(!pt->connected) {
           client[i].listen();
-          t.connected = client[i].accept(client[i]);
+          pt->connected = client[i].accept(client[i]);
         }
         #if PERF_REPORT > 1 
-          cout <<  "[" << i << "] Attempt to act as server: " << t.connected << endl;
+          cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
         #endif
-        if(t.connected) { isclient[i] = 0; } 
+        if(pt->connected) { isclient[i] = 0; } 
       }
       else {
         LOG_WARN("Bind on ch #"<< i <<" failed.");
@@ -448,20 +450,21 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   }
 
   /* Error handling code (in case MPW_InitStream times out for one or more */
-  /*bool all_connected = true;
+  bool all_connected = true;
   for(int i = 0; i < numstreams; i++) {
     if(t[i].connected == false) {
+      LOG_WARN("One connection has failed: #" << i);
       all_connected = false;
     }
   }
   if(!all_connected) {
     for(int i = 0; i < numstreams; i++) {
       if(t[i].connected == true) {
-        client[t[i].i].close();
+        client[stream_indices[i]].close();
       }
     }
     return -1;
-  }*/
+  }
 
   if(MPWideAutoTune == 1) {
     for(unsigned int i=0; i<paths.size(); i++) {
@@ -510,7 +513,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
 }
 
 /* Initialize the MPWide. set client to 1 for one machine, and to 0 for the other. */
-void MPW_Init(string* url, int* ports, int* cports, int numstreams)
+int MPW_Init(string* url, int* ports, int* cports, int numstreams)
 {
   #if PERF_REPORT > 0
     cout << "Initialising..." << endl;
@@ -524,7 +527,7 @@ void MPW_Init(string* url, int* ports, int* cports, int numstreams)
   }
 
   MPW_AddStreams(url, ports, cports, numstreams);
-  MPW_InitStreams(stream_indices, numstreams, true);
+  return MPW_InitStreams(stream_indices, numstreams, true);
 }
 
 /* Constructs a path. Return path id or negative error value. */
@@ -564,15 +567,18 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
 }
 
 int MPW_ConnectPath(int path_id, bool server_wait) {
-  MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams, server_wait);
-  return 0;
+  return MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams, server_wait);
 }
 
 /* Creates and connects a path */
 int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) {
 
   int path_id = MPW_CreatePathWithoutConnect(host, server_side_base_port, streams_in_path);
-  MPW_ConnectPath(path_id, true);
+  int status = MPW_ConnectPath(path_id, true);
+  if(status < 0) { 
+    MPW_DestroyPath(path_id);
+    return -1;
+  }
   return path_id;
 }
 
@@ -634,45 +640,39 @@ void MPW_Recv(char* recvbuf, long long int recvsize, int path) {
 
 
 /* Variant that does not require client port binding. */
-void MPW_Init(string* url, int* ports, int numstreams) 
+int MPW_Init(string* url, int* ports, int numstreams) 
 {
   int cports[numstreams];
 
   for(int i=0; i<numstreams; i++) {
     cports[i] = -1;
   }
-  MPW_Init(url, ports, cports, numstreams);
+  return MPW_Init(url, ports, cports, numstreams);
 }
 
 /* Shorthand initialization call for local processes that use a single stream. */
-void MPW_Init(string url, int port) {
+int MPW_Init(string url, int port) {
   string u1[1] = {url};
   int    p1[1] = {port};
-  MPW_Init(u1,p1,1);
+  return MPW_Init(u1,p1,1);
 }
 
 extern "C" {
-  void MPW_Init_c (char** url, int* ports, int numstreams) 
+  int MPW_Init_c (char** url, int* ports, int numstreams) 
   {
     string* urls = new string[numstreams];
     for(int i=0;i<numstreams;i++) {
       urls[i].assign(url[i]);
     }
-    MPW_Init(urls,ports,numstreams);
+    int status = MPW_Init(urls,ports,numstreams);
     delete [] urls;
+    return status;
   }
 
-  void MPW_Init1_c (char* url, int port)
+  int MPW_Init1_c (char* url, int port)
   {
-    MPW_Init(url, port);
+    return MPW_Init(url, port);
   }
-}
-
-/* Shorthand initialization call for inter-cluster single-stream usage. */
-void MPW_Init(string url) {
-  string u1[1] = {url};
-  int    p1[1] = {6000};
-  MPW_Init(u1,p1,1);
 }
 
 /* Close all sockets and free data structures related to the library. */

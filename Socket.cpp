@@ -348,7 +348,7 @@ bool Socket::connect ( const string host, const int port )
 
   set_non_blocking(true);
   status = ::connect(m_sock, ( sockaddr *) &m_addr, sizeof(m_addr));
-  if(status == false)
+  if(status == -1)
   {   
     return false;
   }   
