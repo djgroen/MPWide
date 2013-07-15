@@ -48,7 +48,7 @@ void MPW_setAutoTuning(bool b) {
 /* Performance report verbosity: 1 reports speeds on send/recv. 2 reports on initialization details.
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
-#define PERF_REPORT 1
+#define PERF_REPORT 2
 #define LVL_ERR 0
 #define LVL_WARN 2
 #define LVL_INFO 4
@@ -59,28 +59,28 @@ void MPW_setAutoTuning(bool b) {
 #define LOG_LVL LVL_INFO
 
 #if LOG_LVL >= LVL_ERR
-#define LOG_ERR(MSG) cout << MSG << endl;
+  #define LOG_ERR(MSG) cout << MSG << endl;
 #else
-#define LOG_ERR(MSG)
+  #define LOG_ERR(MSG)
 #endif
 #if LOG_LVL >= LVL_WARN
-#define LOG_WARN(MSG) cout << MSG << endl;
+  #define LOG_WARN(MSG) cout << MSG << endl;
 #else
-#define LOG_WARN(MSG)
+  #define LOG_WARN(MSG)
 #endif
 #if LOG_LVL >= LVL_INFO
-#define LOG_INFO(MSG) cout << MSG << endl;
+  #define LOG_INFO(MSG) cout << MSG << endl;
 #else
-#define LOG_INFO(MSG)
+  #define LOG_INFO(MSG)
 #endif
 #if LOG_LVL >= LVL_DEBUG
-#define LOG_DEBUG(MSG) cout << MSG << endl;
+  #define LOG_DEBUG(MSG) cout << MSG << endl;
 #else
-#define LOG_DEBUG(MSG)
+  #define LOG_DEBUG(MSG)
 #endif
 
 //#define MONITORING 1
-
+#define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
 
 using namespace std;
@@ -300,6 +300,7 @@ typedef struct init_tmp {
   int i;
   int port;
   int cport;
+  bool server_wait;
 }init_tmp;
 
 void* MPW_InitStream(void* args) 
@@ -310,29 +311,29 @@ void* MPW_InitStream(void* args)
   int port = t.port;
   int cport = t.cport;
   bool connected = false;
+  bool server_wait = t.server_wait;
   client[i].set_non_blocking(false);
 
-  while(!connected) {
-
-    if(isclient[i]) {
-      client[i].create();
-      /* Patch to bypass firewall problems. */
-      if(cport>0) {
-        #if PERF_REPORT > 1
-          cout << "[" << i << "] Trying to bind as client at " << (cport) << endl;
-        #endif
-        int bound = client[i].bind(cport);
-      }
-
-      /* End of patch*/
-      connected = client[i].connect(remote_url[i],port);
+  if(isclient[i]) {
+    client[i].create();
+    /* Patch to bypass firewall problems. */
+    if(cport>0) {
       #if PERF_REPORT > 1
-        cout << "[" << i << "] Attempt to connect as client: " << connected << endl;
+        cout << "[" << i << "] Trying to bind as client at " << (cport) << endl;
       #endif
+      int bound = client[i].bind(cport);
     }
 
-    if(!connected) {
-      client[i].close();
+    /* End of patch*/
+    connected = client[i].connect(remote_url[i],port);
+    #if PERF_REPORT > 1
+      cout << "[" << i << "] Attempt to connect as client: " << connected << endl;
+    #endif
+  }
+ 
+  if(!connected) {
+    client[i].close();
+    if(server_wait) {
       client[i].create();
       int bound = client[i].bind(port);
       #if PERF_REPORT > 1
@@ -340,16 +341,18 @@ void* MPW_InitStream(void* args)
       #endif
 
       if(bound > 0) {
-        client[i].listen();
-        connected = client[i].accept(client[i]);
+        while(!connected) {
+          client[i].listen();
+          connected = client[i].accept(client[i]);
+        }
         #if PERF_REPORT > 1 
           cout <<  "[" << i << "] Attempt to act as server: " << connected << endl;
         #endif
         if(connected) { isclient[i] = 0; } 
       }
       else {
-        LOG_WARN("Bind on ch #"<< i <<" failed: waiting for 1 s.")
-    	sleep(1);
+        LOG_WARN("Bind on ch #"<< i <<" failed.");
+        client[i].close();
       }
     }
   }
@@ -412,7 +415,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
   }
 }
 
-void MPW_InitStreams(int *stream_indices, int numstreams) {
+void MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   pthread_t streams[numstreams];
   init_tmp t[numstreams];
 
@@ -420,6 +423,7 @@ void MPW_InitStreams(int *stream_indices, int numstreams) {
     t[i].i    = stream_indices[i];
     t[i].port = port[i];
     t[i].cport = cport[i];
+    t[i].server_wait = server_wait;
     if(i>0) {
       int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
     }
@@ -491,7 +495,7 @@ void MPW_Init(string* url, int* ports, int* cports, int numstreams)
   }
 
   MPW_AddStreams(url, ports, cports, numstreams);
-  MPW_InitStreams(stream_indices, numstreams);
+  MPW_InitStreams(stream_indices, numstreams, true);
 }
 
 /* Constructs a path. Return path id or negative error value. */
@@ -530,9 +534,8 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
   return path_id;
 }
 
-/* Connects a path. */
-int MPW_ConnectPath(int path_id) {
-  MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams);
+int MPW_ConnectPath(int path_id, bool server_wait) {
+  MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams, server_wait);
   return 0;
 }
 
@@ -540,7 +543,7 @@ int MPW_ConnectPath(int path_id) {
 int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) {
 
   int path_id = MPW_CreatePathWithoutConnect(host, server_side_base_port, streams_in_path);
-  MPW_ConnectPath(path_id);
+  MPW_ConnectPath(path_id, true);
   return path_id;
 }
 
@@ -1309,6 +1312,10 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
   for(int i=0; i<nc; i++) {
     cout << "channel " << i << ": " << channel[i] << endl;
   }
+#endif
+
+#if OptimizeStreamCount == 1
+  nc = max(1, min(nc, max(sendsize, recvsize)/2048) ); // nc = total_size [kb] / 2.
 #endif
 
   size_t sendsize_each = size_t(sendsize / nc);

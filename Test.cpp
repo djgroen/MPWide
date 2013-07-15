@@ -70,7 +70,8 @@ int main(int argc, char** argv){
 //    sports[i] = 16256+i;
 //  }
 
-  int path_id = MPW_CreatePath(host, 16256, size); ///path version
+  int path_id = MPW_CreatePathWithoutConnect(host, 16256, size); ///path version
+  int status  = MPW_ConnectPath(path_id, true);
 //  MPW_Init(hosts, sports, size); ///non-path version.
 //  delete [] hosts;
   cerr << "\nSmall test completed, now commencing large test.\n" << endl;
