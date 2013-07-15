@@ -1197,7 +1197,7 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
   t = GetTime() - t;
 
     #if PERF_REPORT>0
-      long long int total_size = sendsize2 + dyn_recvsize_recvchannel;
+      long long int total_size = sendsize2 + (ta[0].dyn_recvsize)[0];
       cout << "Cycle: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
     SendRecvTime += t;
