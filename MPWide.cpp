@@ -267,8 +267,10 @@ int MPW_NumChannels(){
   return num_streams;
 }
 
+#if MONITORING == 1
 long long int bytes_sent;
 bool stop_monitor = false;
+#endif
 
 #ifdef PERF_TIMING
 #if MONITORING == 1
@@ -678,7 +680,9 @@ extern "C" {
 /* Close all sockets and free data structures related to the library. */
 int MPW_Finalize()
 {
+#if MONITORING == 1
   stop_monitor = true;
+#endif
   for(int i=0; i<num_streams; i++) {
     client[i].close();
     if(!isclient[i]) {
