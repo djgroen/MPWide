@@ -333,13 +333,16 @@ void* MPW_InitStream(void* args)
       long long connect_counter = 0;
     #endif
     LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
-    while(server_wait == false && !pt->connected) {
+    if (!server_wait) {
       pt->connected = client[i].connect(remote_url[i],port);
-      usleep(10000);
-      #if InitStreamTimeOut > 0
-        connect_counter += 10;
-        if(connect_counter >= InitStreamTimeOut) { break; }
-      #endif
+      while(!pt->connected) {
+#if InitStreamTimeOut > 0
+          connect_counter += 10;
+          if(connect_counter >= InitStreamTimeOut) { break; }
+#endif
+        usleep(10000);
+        pt->connected = client[i].connect(remote_url[i],port);
+      }
     }
     #if PERF_REPORT > 1
       cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  " :" << pt->connected << endl;
