@@ -30,7 +30,7 @@
 #include <cstdlib>
 #include <stdio.h>
 
-#define min(X,Y)   ((X) < (Y) ? (X) : (Y))
+#define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
 
 using namespace std;
