@@ -225,43 +225,14 @@ char *MPW_DNSResolve(string host) {
   return MPW_DNSResolve(l_host);
 }
 
-int selectSockets(int wchannel, int rchannel, int mask)
+inline int selectSockets(int wchannel, int rchannel, int mask)
 /* Returns:
  0 if no access.
  1 if read on read channel.
  2 if write on write channel.
  3 if both. */
 {
-  int rsockp = client[rchannel].getSock();
-  int wsockp = client[wchannel].getSock();
-
-  /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
-  int ok = 0;
-  int access = 0;
-
-  fd_set rsock, wsock;
-  FD_ZERO(&rsock);
-  FD_ZERO(&wsock);
-  FD_SET(rsockp,&rsock); 
-  FD_SET(wsockp,&wsock);
-
-  struct timeval timeout;
-  timeout.tv_sec  = 10;
-  timeout.tv_usec = 0;
-
-  ok = select(max(rsockp,wsockp)+1, &rsock, &wsock, (fd_set *) 0, &timeout);
-  if(ok) {
-    if((mask|1) == 0) {
-      if(FD_ISSET(rsockp,&rsock)) { access = 1;  }
-    }
-    if((mask|2) == 0) {
-      if(FD_ISSET(wsockp,&wsock)) { access |= 2; }
-    }
-  }
-  else if (ok<0){
-    LOG_ERR("socketSelect error: " << errno); //" Msg: " << strerror(errno));
-  }
-  return access;
+    return Socket_select(client[rchannel].getSock(), client[wchannel].getSock(), mask, 10);
 }
 
 int MPW_NumChannels(){

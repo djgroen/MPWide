@@ -294,7 +294,6 @@ int Socket::isend ( const char* s, long long int size ) const
   return status;
 }
 
-int Socket::select_me (int mask, int timeout_val) const
 /*
  Returns:
  0 if no access.
@@ -305,36 +304,10 @@ int Socket::select_me (int mask, int timeout_val) const
  0 if we check for read & write.
  MPWIDE_SOCKET_RDMASK if we check for write only.
  MPWIDE_SOCKET_WRMASK if we check for read only.
-*/
+ */
+int Socket::select_me (int mask, int timeout_val) const
 {
-  int ok = 0;
-  int access = 0;
-
-  fd_set rsock, wsock;
-  FD_ZERO(&rsock);
-  FD_ZERO(&wsock);
-  if(!FLAG_CHECK(mask, MPWIDE_SOCKET_RDMASK)) { FD_SET(m_sock,&rsock); }
-  if(!FLAG_CHECK(mask, MPWIDE_SOCKET_WRMASK)) { FD_SET(m_sock,&wsock); }
-
-  struct timeval timeout;
-  timeout.tv_sec  = timeout_val;
-  timeout.tv_usec = 0;
-
-  //  cout << "select(): mask = " << mask << endl;
-  /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
-  ok = select(m_sock+1, &rsock, &wsock, (fd_set *) 0, &timeout);
-  if(ok) {
-    if (!FLAG_CHECK(mask, MPWIDE_SOCKET_RDMASK) && FD_ISSET(m_sock,&rsock)) {
-      access |= MPWIDE_SOCKET_RDMASK;
-    }
-    if (!FLAG_CHECK(mask, MPWIDE_SOCKET_WRMASK) && FD_ISSET(m_sock,&wsock)) {
-      access |= MPWIDE_SOCKET_WRMASK;
-    }
-  }
-  else if (ok<0){
-    cout << "select_me error: " << errno << " Msg: " << strerror(errno) << endl;
-  }
-  return access;
+    return Socket_select(m_sock, m_sock, mask, timeout_val);
 }
 
 bool Socket::connect ( const string host, const int port )
@@ -402,4 +375,51 @@ void Socket::set_non_blocking ( const bool b )
     opts = ( opts & ~O_NONBLOCK );
   }
   fcntl(m_sock, F_SETFL, opts);
+}
+
+/**
+ Returns:
+ 0 if no access.
+ MPWIDE_SOCKET_RDMASK if read.
+ MPWIDE_SOCKET_WRMASK if write.
+ MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK if both.
+ int mask is...
+ 0 if we check for read & write.
+ MPWIDE_SOCKET_RDMASK if we check for write only.
+ MPWIDE_SOCKET_WRMASK if we check for read only.
+ */
+int Socket_select(int rs, int ws, int mask, int timeout_val)
+{
+    int ok = 0;
+    int access = 0;
+    
+    fd_set rsock, wsock;
+    FD_ZERO(&rsock);
+    FD_ZERO(&wsock);
+    if(!FLAG_CHECK(mask, MPWIDE_SOCKET_RDMASK)) {
+      FD_SET(rs,&rsock);
+    }
+    if(!FLAG_CHECK(mask, MPWIDE_SOCKET_WRMASK)) {
+      FD_SET(ws,&wsock);
+    }
+    
+    struct timeval timeout;
+    timeout.tv_sec  = timeout_val;
+    timeout.tv_usec = 0;
+    
+    //  cout << "select(): mask = " << mask << endl;
+    /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
+    ok = select(max(rs, ws)+1, &rsock, &wsock, (fd_set *) 0, &timeout);
+    if(ok) {
+        if (!FLAG_CHECK(mask, MPWIDE_SOCKET_RDMASK) && FD_ISSET(rs,&rsock)) {
+            access |= MPWIDE_SOCKET_RDMASK;
+        }
+        if (!FLAG_CHECK(mask, MPWIDE_SOCKET_WRMASK) && FD_ISSET(ws,&wsock)) {
+            access |= MPWIDE_SOCKET_WRMASK;
+        }
+    }
+    else if (ok<0){
+        cout << "select_me error: " << errno << " Msg: " << strerror(errno) << endl;
+    }
+    return access;
 }

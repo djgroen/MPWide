@@ -86,4 +86,6 @@ class Socket
 
 };
 
+int Socket_select(int rsock, int wsock, int mask, int timeout_val);
+
 #endif
