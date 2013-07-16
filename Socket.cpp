@@ -31,6 +31,8 @@
 #include <stdio.h>
 
 #define min(X,Y)   ((X) < (Y) ? (X) : (Y))
+#define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
+
 using namespace std;
 
 Socket::Socket() :
@@ -296,37 +298,37 @@ int Socket::select_me (int mask, int timeout_val) const
 /*
  Returns:
  0 if no access.
- 1 if read.
- 2 if write.
- 3 if both.
+ MPWIDE_SOCKET_RDMASK if read.
+ MPWIDE_SOCKET_WRMASK if write.
+ MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK if both.
  int mask is...
  0 if we check for read & write.
- 1 if we check for write only.
- 2 if we check for read only.
+ MPWIDE_SOCKET_RDMASK if we check for write only.
+ MPWIDE_SOCKET_WRMASK if we check for read only.
 */
 {
-  /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
   int ok = 0;
   int access = 0;
 
   fd_set rsock, wsock;
   FD_ZERO(&rsock);
   FD_ZERO(&wsock);
-  if(mask%2 == 0) { FD_SET(m_sock,&rsock); }
-  if(mask/2 == 0) { FD_SET(m_sock,&wsock); }
+  if(!FLAG_CHECK(mask, MPWIDE_SOCKET_RDMASK)) { FD_SET(m_sock,&rsock); }
+  if(!FLAG_CHECK(mask, MPWIDE_SOCKET_WRMASK)) { FD_SET(m_sock,&wsock); }
 
   struct timeval timeout;
   timeout.tv_sec  = timeout_val;
   timeout.tv_usec = 0;
 
   //  cout << "select(): mask = " << mask << endl;
+  /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
   ok = select(m_sock+1, &rsock, &wsock, (fd_set *) 0, &timeout);
   if(ok) {
-    if(mask%2 == 0) {
-      if(FD_ISSET(m_sock,&rsock)) { access++;    }
+    if (!FLAG_CHECK(mask, MPWIDE_SOCKET_RDMASK) && FD_ISSET(m_sock,&rsock)) {
+      access |= MPWIDE_SOCKET_RDMASK;
     }
-    if(mask/2 == 0) {
-      if(FD_ISSET(m_sock,&wsock)) { access += 2; }
+    if (!FLAG_CHECK(mask, MPWIDE_SOCKET_WRMASK) && FD_ISSET(m_sock,&wsock)) {
+      access |= MPWIDE_SOCKET_WRMASK;
     }
   }
   else if (ok<0){

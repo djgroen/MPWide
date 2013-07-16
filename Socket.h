@@ -34,6 +34,9 @@ const int MAXHOSTNAME = 200;
 const int MAXCONNECTIONS = 5;
 const int WINSIZE = 1*1024*1024;
 
+#define MPWIDE_SOCKET_RDMASK 1
+#define MPWIDE_SOCKET_WRMASK 2
+
 class Socket
 {
  public:

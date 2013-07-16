@@ -82,6 +82,7 @@ void MPW_setAutoTuning(bool b) {
 //#define MONITORING 1
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
+#define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
 
 using namespace std;
 
@@ -250,11 +251,11 @@ int selectSockets(int wchannel, int rchannel, int mask)
 
   ok = select(max(rsockp,wsockp)+1, &rsock, &wsock, (fd_set *) 0, &timeout);
   if(ok) {
-    if(mask%2 == 0) {
-      if(FD_ISSET(rsockp,&rsock)) { access++;    }
+    if((mask|1) == 0) {
+      if(FD_ISSET(rsockp,&rsock)) { access = 1;  }
     }
-    if(mask/2 == 0) {
-      if(FD_ISSET(wsockp,&wsock)) { access += 2; }
+    if((mask|2) == 0) {
+      if(FD_ISSET(wsockp,&wsock)) { access |= 2; }
     }
   }
   else if (ok<0){
@@ -719,6 +720,9 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
   double t = GetTime();
 #endif
 
+  assert(sendsize > 0);
+  assert(recvsize > 0);
+
   long long int a = 0;
   long long int b = 0;
 
@@ -730,41 +734,30 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
   }
   client[channel].set_non_blocking(true); 
 
-  bool rdone = false;
-  bool wdone = false;
-
   int mask = 0;
-  while((a < sendsize) || (b < recvsize)) {
-
+  while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
     int mode = selectSockets(channel,channel2,mask);
 
-    if(!rdone && (mode%2==1)) {
-      if((recvsize-b)) {
-        int n = client[channel2].irecv(recvbuf+b,min(tcpbuf_rsize,recvsize-b)); 
-        b += n;
-	    #if MONITORING == 1
-	    bytes_sent += n;
-	    #endif
-      }
-      if(!(recvsize-b)) {
-        mask++; //don't check for read anymore
-        rdone = true;
-      }
+    if(FLAG_CHECK(mode,MPWIDE_SOCKET_RDMASK)) {
+      int n = client[channel2].irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
+      b += n;
+      #if MONITORING == 1
+      bytes_sent += n;
+      #endif
+
+      if(b == recvsize)
+        mask |= MPWIDE_SOCKET_RDMASK; //don't check for read anymore
     }
 
-    if(!wdone && (mode/2==1)) {
-      if(sendsize-a) {
-        int n = client[channel].isend(sendbuf+a,min(tcpbuf_ssize,sendsize-a)); 
+    if(FLAG_CHECK(mode,MPWIDE_SOCKET_WRMASK)) {
+      int n = client[channel].isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
+      a += n;
+      #if MONITORING == 1
+      bytes_sent += n;
+      #endif
 
-        a += n;
-        #if MONITORING == 1
-        bytes_sent += n;
-        #endif
-      }
-      if(!(sendsize-a)) {
-        mask += 2; //don't check for write anymore
-        wdone = true;
-      }
+      if(a == sendsize)
+        mask |= MPWIDE_SOCKET_WRMASK; //don't check for write anymore
     }
 
     #if PacingMode == 1
