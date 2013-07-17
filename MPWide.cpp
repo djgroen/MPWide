@@ -267,8 +267,10 @@ int MPW_NumChannels(){
   return num_streams;
 }
 
+#if MONITORING == 1
 long long int bytes_sent;
 bool stop_monitor = false;
+#endif
 
 #ifdef PERF_TIMING
 #if MONITORING == 1
@@ -582,11 +584,11 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
   return path_id;
 }
 
-void DecrementStreamIndices(int q) {
+void DecrementStreamIndices(int q, int len) {
   for(unsigned int i=0; i<paths.size(); i++) {
     for(int j=0; j<paths[i].num_streams; j++) {
       if(paths[i].streams[j] > q) { 
-        paths[i].streams[j]--; 
+        paths[i].streams[j] -= len;
       }
     }
   }
@@ -594,7 +596,7 @@ void DecrementStreamIndices(int q) {
 
 void EraseStream(int i) {
   port.erase(port.begin()+i);
-  cport.erase(port.begin()+i);
+  cport.erase(cport.begin()+i);
   isclient.erase(isclient.begin()+i);
   client.erase(client.begin()+i);
   remote_url.erase(remote_url.begin()+i);
@@ -612,13 +614,23 @@ void MPW_setPathWin(int path, int size) {
 }
 
 // Return 0 on success (negative on failure).
+// It assumes that the array of streams in a path is contiguous
 int MPW_DestroyPath(int path) {
-  MPW_CloseChannels(paths[path].streams, paths[path].num_streams);
-  for(int i=0; i < paths[path].num_streams; i++) {
-    EraseStream(paths[path].streams[i]);
-    DecrementStreamIndices(i);
-  }
+  const int len = paths[path].num_streams;
+  const int i = paths[path].streams[0];
+  const int end = i + len;
+  MPW_CloseChannels(paths[path].streams, len);
+  port.erase(port.begin()+i, port.begin()+end);
+  cport.erase(cport.begin()+i, cport.begin()+end);
+  isclient.erase(isclient.begin()+i, isclient.begin()+end);
+  client.erase(client.begin()+i, client.begin()+end);
+  remote_url.erase(remote_url.begin()+i, remote_url.begin()+end);
+  num_streams -= len;
+
+  DecrementStreamIndices(i, len);
+
   paths.erase(paths.begin()+path);
+  return 0;
 }
 
 /* Path-based Send and Recv operations*/
@@ -678,7 +690,9 @@ extern "C" {
 /* Close all sockets and free data structures related to the library. */
 int MPW_Finalize()
 {
+#if MONITORING == 1
   stop_monitor = true;
+#endif
   for(int i=0; i<num_streams; i++) {
     client[i].close();
     if(!isclient[i]) {

@@ -37,7 +37,7 @@ int main(int argc, char** argv){
   int size = 1;
 
   if(argc==1) {
-    printf("usage: ./MPWTest <ip address of other endpoint> <channels> <buffer [kb]> <pacing [MB/s]> <tcpwin [bytes]>. \n All parameters after the first are optional.\n");
+    printf("usage: ./MPWTest <ip address of other endpoint> <channels (default: 1)> <buffer [kB] (default: 8 kB))> <act_as_server (default: 1)> \n All parameters after the first are optional.\n");
     exit(0);
   }
 
@@ -52,12 +52,15 @@ int main(int argc, char** argv){
     bufsize = atoi(argv[3]);
   }
 
-  int is_server = atoi(argv[4]);
 
 //  if(argc>4) {
 //    MPW_setAutoTuning(false);
 //    MPW_setPacingRate((atoi(argv[4]))*1024*1024);
 //  }
+  int is_server = 1;
+  if (argc>4) {
+      is_server = atoi(argv[4]);
+  }
 
   int winsize = 16*1024*1024;
 //  if(argc>5) {
@@ -78,6 +81,10 @@ int main(int argc, char** argv){
   }
   else {
     int status  = MPW_ConnectPath(path_id, false);
+    if (status == -1) {
+        MPW_DestroyPath(path_id);
+        exit(1);
+    }
   }
 //  MPW_Init(hosts, sports, size); ///non-path version.
 //  delete [] hosts;
