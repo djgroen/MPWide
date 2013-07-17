@@ -616,9 +616,9 @@ void MPW_setPathWin(int path, int size) {
 // Return 0 on success (negative on failure).
 // It assumes that the array of streams in a path is contiguous
 int MPW_DestroyPath(int path) {
-  int len = paths[path].num_streams;
-  int i = paths[path].streams[0];
-  int end = i + len;
+  const int len = paths[path].num_streams;
+  const int i = paths[path].streams[0];
+  const int end = i + len;
   MPW_CloseChannels(paths[path].streams, len);
   port.erase(port.begin()+i, port.begin()+end);
   cport.erase(cport.begin()+i, cport.begin()+end);
