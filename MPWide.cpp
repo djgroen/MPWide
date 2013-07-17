@@ -584,11 +584,11 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
   return path_id;
 }
 
-void DecrementStreamIndices(int q) {
+void DecrementStreamIndices(int q, int len) {
   for(unsigned int i=0; i<paths.size(); i++) {
     for(int j=0; j<paths[i].num_streams; j++) {
       if(paths[i].streams[j] > q) { 
-        paths[i].streams[j]--; 
+        paths[i].streams[j] -= len;
       }
     }
   }
@@ -614,13 +614,23 @@ void MPW_setPathWin(int path, int size) {
 }
 
 // Return 0 on success (negative on failure).
+// It assumes that the array of streams in a path is contiguous
 int MPW_DestroyPath(int path) {
-  MPW_CloseChannels(paths[path].streams, paths[path].num_streams);
-  for(int i=0; i < paths[path].num_streams; i++) {
-    EraseStream(paths[path].streams[i]);
-    DecrementStreamIndices(i);
-  }
+  int len = paths[path].num_streams;
+  int i = paths[path].streams[0];
+  int end = i + len;
+  MPW_CloseChannels(paths[path].streams, len);
+  port.erase(port.begin()+i, port.begin()+end);
+  cport.erase(cport.begin()+i, cport.begin()+end);
+  isclient.erase(isclient.begin()+i, isclient.begin()+end);
+  client.erase(client.begin()+i, client.begin()+end);
+  remote_url.erase(remote_url.begin()+i, remote_url.begin()+end);
+  num_streams -= len;
+
+  DecrementStreamIndices(i, len);
+
   paths.erase(paths.begin()+path);
+  return 0;
 }
 
 /* Path-based Send and Recv operations*/
