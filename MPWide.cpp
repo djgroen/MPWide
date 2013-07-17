@@ -596,7 +596,7 @@ void DecrementStreamIndices(int q) {
 
 void EraseStream(int i) {
   port.erase(port.begin()+i);
-  cport.erase(port.begin()+i);
+  cport.erase(cport.begin()+i);
   isclient.erase(isclient.begin()+i);
   client.erase(client.begin()+i);
   remote_url.erase(remote_url.begin()+i);
