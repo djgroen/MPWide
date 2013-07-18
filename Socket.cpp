@@ -108,7 +108,7 @@ bool Socket::bind ( const int port )
 }
 
 
-bool Socket::listen( const int port )
+bool Socket::listen()
 {
   if ( ! is_valid() )
     {
@@ -122,10 +122,6 @@ bool Socket::listen( const int port )
       return false;
     }
 
-  m_addr.sin_family = AF_INET;
-  m_addr.sin_addr.s_addr = INADDR_ANY;
-  m_addr.sin_port = htons(port);
-    
   #if REPORT_BUFFERSIZES > 0
   int tcp_sbuf = 0;
   int tcp_rbuf = 0;

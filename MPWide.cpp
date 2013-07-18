@@ -49,7 +49,6 @@ void MPW_setAutoTuning(bool b) {
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
 #define PERF_REPORT 2
-#define BIND_SERVER_SOCKET 1
 
 #define LVL_ERR 0
 #define LVL_WARN 2
@@ -320,7 +319,6 @@ void* MPW_InitStream(void* args)
     if(server_wait) {
       client[i].create();
 
-      #if BIND_SERVER_SOCKET == 1
       bool bound = client[i].bind(port);
       #if PERF_REPORT > 1
         cout << "[" << i << "] Trying to bind as server at " << (port) << ". Result = " << bound << endl;
@@ -331,9 +329,8 @@ void* MPW_InitStream(void* args)
         client[i].close();
         return NULL;
       }
-      #endif// BIND_SERVER_SOCKET
 
-      if (client[i].listen(port)) {
+      if (client[i].listen()) {
           pt->connected = client[i].accept();
           #if PERF_REPORT > 1
           cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
