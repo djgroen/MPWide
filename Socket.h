@@ -46,11 +46,11 @@ class Socket
   // Server initialization
   bool create();
   bool bind ( const int port );
-  bool listen() const;
-  bool accept ( Socket& ) const;
+  bool listen( int port );
+  bool accept();
 
   // Client initialization
-  bool connect ( const std::string host, const int port );
+  int connect ( const std::string host, const int port );
 
   // Data Transimission
   bool send (const char* s, long long int size ) const;
@@ -63,6 +63,8 @@ class Socket
   // Check if the socket is readable / writable. Timeout is 2 minutes.
   int select_me (int mask) const;
   int select_me (int mask, int timeout_val) const;
+  int select_me (int mask, int timeout_s, int timeout_u) const;
+  int select_server (int mask, int timeout_s, int timeout_u) const;
 
   void set_non_blocking ( const bool );
   void setWin(int size);
@@ -86,6 +88,6 @@ class Socket
 
 };
 
-int Socket_select(int rsock, int wsock, int mask, int timeout_val);
+int Socket_select(int rsock, int wsock, int mask, int timeout_s, int timeout_u);
 
 #endif

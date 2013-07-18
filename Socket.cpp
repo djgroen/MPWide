@@ -41,7 +41,7 @@ Socket::Socket() :
   memset ( &m_addr,
 	   0,
 	   sizeof ( m_addr ) );
-//  set_non_blocking(true);
+  set_non_blocking(true);
 }
 
 Socket::~Socket()
@@ -114,7 +114,7 @@ bool Socket::bind ( const int port )
 }
 
 
-bool Socket::listen() const
+bool Socket::listen( const int port )
 {
   if ( ! is_valid() )
     {
@@ -128,6 +128,10 @@ bool Socket::listen() const
       return false;
     }
 
+  m_addr.sin_family = AF_INET;
+  m_addr.sin_addr.s_addr = INADDR_ANY;
+  m_addr.sin_port = htons(port);
+    
   #if REPORT_BUFFERSIZES > 0
   int tcp_sbuf = 0;
   int tcp_rbuf = 0;
@@ -140,20 +144,19 @@ bool Socket::listen() const
   return true;
 }
 
-bool Socket::accept ( Socket& new_socket ) const
+bool Socket::accept()
 {
-  new_socket.s_sock = s_sock;
-  int addr_length = sizeof ( m_addr );
-  new_socket.m_sock = ::accept ( s_sock, ( sockaddr * ) &m_addr, ( socklen_t * ) &addr_length );
+  set_non_blocking(false);
+  socklen_t addr_length = (socklen_t) sizeof ( m_addr );
+  m_sock = ::accept ( s_sock, ( sockaddr * ) &m_addr, &addr_length );
+  set_non_blocking(true);
 
-  if ( new_socket.m_sock <= 0 ) {
-    cout << "accept: Failed to accept. Returns " << new_socket.m_sock << endl;
+  if ( m_sock <= 0 ) {
+    cout << "accept: Failed to accept. Returns " << m_sock << endl;
     cout << "errno = " << errno << ". Message is: " << strerror(errno) << endl;
     return false;
   }
-  else {
-    return true;
-  }
+  else return true;
 }
 
 
@@ -305,12 +308,27 @@ int Socket::isend ( const char* s, long long int size ) const
  MPWIDE_SOCKET_RDMASK if we check for write only.
  MPWIDE_SOCKET_WRMASK if we check for read only.
  */
-int Socket::select_me (int mask, int timeout_val) const
+int Socket::select_me (int mask) const
 {
-    return Socket_select(m_sock, m_sock, mask, timeout_val);
+  return select_me (mask, 10, 0);
 }
 
-bool Socket::connect ( const string host, const int port )
+int Socket::select_me (int mask, int timeout_val) const
+{
+    return select_me(mask, timeout_val, 0);
+}
+
+int Socket::select_me (int mask, int timeout_s, int timeout_u) const
+{
+  return Socket_select(m_sock, m_sock, mask, timeout_s, timeout_u);
+}
+
+int Socket::select_server (int mask, int timeout_s, int timeout_u) const
+{
+  return Socket_select(s_sock, s_sock, mask, timeout_s, timeout_u);
+}
+
+int Socket::connect ( const string host, const int port )
 {
   if ( ! is_valid() ) return false;
 
@@ -318,15 +336,23 @@ bool Socket::connect ( const string host, const int port )
   m_addr.sin_port = htons ( port );
   int status = inet_pton ( AF_INET, host.c_str(), &m_addr.sin_addr );
 
-  if ( errno == EAFNOSUPPORT ) return false;
-//  status = ::connect ( m_sock, ( sockaddr * ) &m_addr, sizeof ( m_addr ) );
+  if ( status < 1 ) {
+    #if REPORT_BUFFERSIZES > 0
+      cerr << "Could not convert address'" << host << "': " << string(strerror(errno)) << "/" << errno << endl;
+    #endif
+    return -1;
+  }
 
   set_non_blocking(true);
-  status = ::connect(m_sock, ( sockaddr *) &m_addr, sizeof(m_addr));
-  if(status == -1)
-  {   
-    return false;
-  }   
+  socklen_t sz = sizeof(m_addr);
+  status = ::connect(m_sock, (struct sockaddr *) &m_addr, sz);
+  if(status == -1) {
+      #if REPORT_BUFFERSIZES > 0
+        if (errno != EINPROGRESS && errno != EALREADY && errno != EISCONN && errno != EAGAIN)
+          cerr << "Could not connect: " << string(strerror(errno)) << "/" << errno << endl;
+      #endif
+      return errno;
+  }
 
   int write = select_me(1,1);
   set_non_blocking(false);
@@ -348,19 +374,14 @@ bool Socket::connect ( const string host, const int port )
     #if REPORT_BUFFERSIZES > 0
     cout << "socket is connected! " << error_buf << endl;
     #endif
-    return true;
+    return 0;
   }
   else {
     #if REPORT_BUFFERSIZES > 0
     cout << "socket is NOT connected! " << error_buf << endl;
     #endif
-    return false; 
+    return -1;
   }
-}
-
-int Socket::select_me (int mask) const
-{
-  return select_me (mask, 10);
 }
 
 void Socket::set_non_blocking ( const bool b )
@@ -388,7 +409,7 @@ void Socket::set_non_blocking ( const bool b )
  MPWIDE_SOCKET_RDMASK if we check for write only.
  MPWIDE_SOCKET_WRMASK if we check for read only.
  */
-int Socket_select(int rs, int ws, int mask, int timeout_val)
+int Socket_select(int rs, int ws, int mask, int timeout_s, int timeout_u)
 {
     int ok = 0;
     int access = 0;
@@ -404,8 +425,8 @@ int Socket_select(int rs, int ws, int mask, int timeout_val)
     }
     
     struct timeval timeout;
-    timeout.tv_sec  = timeout_val;
-    timeout.tv_usec = 0;
+    timeout.tv_sec  = timeout_s;
+    timeout.tv_usec = timeout_u;
     
     //  cout << "select(): mask = " << mask << endl;
     /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/

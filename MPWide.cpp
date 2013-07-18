@@ -49,11 +49,12 @@ void MPW_setAutoTuning(bool b) {
    3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
    reports for accumulated bytes after every chunk is received. */
 #define PERF_REPORT 2
+#define BIND_SERVER_SOCKET 1
+
 #define LVL_ERR 0
 #define LVL_WARN 2
 #define LVL_INFO 4
 #define LVL_DEBUG 6
-#define LVL_TRACE 8
 #define MONITORING 1
 
 #define LOG_LVL LVL_INFO
@@ -79,7 +80,6 @@ void MPW_setAutoTuning(bool b) {
   #define LOG_DEBUG(MSG)
 #endif
 
-//#define MONITORING 1
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #define min(X,Y) ((X) < (Y) ? (X) : (Y))
 #define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
@@ -232,7 +232,7 @@ inline int selectSockets(int wchannel, int rchannel, int mask)
  2 if write on write channel.
  3 if both. */
 {
-    return Socket_select(client[rchannel].getSock(), client[wchannel].getSock(), mask, 10);
+    return Socket_select(client[rchannel].getSock(), client[wchannel].getSock(), mask, 10, 0);
 }
 
 int MPW_NumChannels(){
@@ -300,24 +300,27 @@ void* MPW_InitStream(void* args)
     }
 
     /* End of patch*/
-    pt->connected = client[i].connect(remote_url[i],port);
-    #if InitStreamTimeOut > 0
-      long long connect_counter = 0;
-    #endif
-    LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
+    int status = client[i].connect(remote_url[i],port);
+    LOG_WARN("Server wait & connected " << server_wait << "," << status);
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 10000;
+    
+  #if InitStreamTimeOut > 0
+    if (!server_wait && status == EINPROGRESS) {
+      for (long long connect_counter = 0; (status == EINPROGRESS || status == EALREADY || status == EISCONN || status == EAGAIN) && connect_counter < InitStreamTimeOut; connect_counter += 10) {
+  #else
     if (!server_wait) {
-      pt->connected = client[i].connect(remote_url[i],port);
-      while(!pt->connected) {
-#if InitStreamTimeOut > 0
-          connect_counter += 10;
-          if(connect_counter >= InitStreamTimeOut) { break; }
-#endif
-        usleep(10000);
-        pt->connected = client[i].connect(remote_url[i],port);
+      while(status != 0) {
+  #endif
+        if (client[i].select_me(MPWIDE_SOCKET_RDMASK, 0, 10000))
+          status = client[i].connect(remote_url[i],port);
       }
     }
+    pt->connected = (status == 0);
     #if PERF_REPORT > 1
-      cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  " :" << pt->connected << endl;
+      cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  ": " << pt->connected << endl;
     #endif
   }
  
@@ -325,24 +328,26 @@ void* MPW_InitStream(void* args)
     client[i].close();
     if(server_wait) {
       client[i].create();
-      int bound = client[i].bind(port);
+
+      #if BIND_SERVER_SOCKET == 1
+      const int bound = client[i].bind(port);
       #if PERF_REPORT > 1
         cout << "[" << i << "] Trying to bind as server at " << (port) << ". Result = " << bound << endl;
       #endif
-
-      if(bound > 0) {
-        while(!pt->connected) {
-          client[i].listen();
-          pt->connected = client[i].accept(client[i]);
-        }
-        #if PERF_REPORT > 1 
-          cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
-        #endif
-        if(pt->connected) { isclient[i] = 0; } 
-      }
-      else {
-        LOG_WARN("Bind on ch #"<< i <<" failed.");
+      
+      if (bound <= 0) {
+        LOG_WARN("Listen on ch #"<< i <<" failed.");
         client[i].close();
+        return NULL;
+      }
+      #endif // BIND_SERVER_SOCKET
+
+      if (client[i].listen(port)) {
+          pt->connected = client[i].accept();
+          #if PERF_REPORT > 1
+            cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
+          #endif
+          if(pt->connected) { isclient[i] = 0; }
       }
     }
   }
