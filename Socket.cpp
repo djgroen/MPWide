@@ -140,17 +140,21 @@ bool Socket::listen( const int port )
 
 bool Socket::accept()
 {
-  set_non_blocking(false);
   socklen_t addr_length = (socklen_t) sizeof ( m_addr );
-  m_sock = ::accept ( s_sock, ( sockaddr * ) &m_addr, &addr_length );
-  set_non_blocking(true);
+  int new_m_sock = ::accept ( m_sock, ( sockaddr * ) &m_addr, &addr_length );
 
+  ::close(m_sock);
+  m_sock = new_m_sock;
+  
   if ( m_sock <= 0 ) {
     cout << "accept: Failed to accept. Returns " << m_sock << endl;
     cout << "errno = " << errno << ". Message is: " << strerror(errno) << endl;
     return false;
   }
-  else return true;
+  else {
+    set_non_blocking(true);
+    return true;
+  }
 }
 
 
