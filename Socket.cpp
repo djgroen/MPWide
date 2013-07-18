@@ -160,117 +160,100 @@ bool Socket::accept()
 
 bool Socket::send ( const char* s, long long int size ) const
 {
+  fd_set sock;
   struct timeval timeout;
-  timeout.tv_sec = 10;
-  timeout.tv_usec = 0;
 
   /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
   int ok = 0;
 
-  fd_set sock;
-  FD_ZERO(&sock);
-  FD_SET(m_sock,&sock);
-  ok = select(m_sock+1, (fd_set *) 0, &sock, (fd_set *) 0, &timeout);
   int count = 0;
-  while(ok<1) {
+  size_t bytes_sent = 0;
+  size_t sendsize = (size_t)size;
 
-    struct timeval timeout;
+  while(bytes_sent < size) {
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
-
-    FD_ZERO(&sock);
-    FD_SET(m_sock,&sock);
-//BUG: ??? Test later!
-    ok = select(m_sock+1, &sock, (fd_set *) 0, (fd_set *) 0, &timeout);
-    if(ok<1) {
+    ok = Socket_select(0, m_sock, 0, &sock, &timeout);
+;
+    if (ok == MPWIDE_SOCKET_WRMASK) {
+      count = 0;
+      ssize_t status = ::send(m_sock, s+bytes_sent, sendsize-bytes_sent, tcp_send_flag);
+      if ( status == -1 ) {
+        cerr << "Socket.send error. Details: " << errno << "/"<< strerror(errno) << endl;
+        return false;
+      }
+      bytes_sent += status;
+    }
+    else {
       usleep(50000);
       #if REPORT_BUFFERSIZES > 0
       cout << "s";
       #endif
-      count++;
       if(ok<0) {
         fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
         fflush(stderr);
         exit(-9);
         }
       }
-    else { count = 0; }
-    if(count>5) {
-      cerr << "Send timeout: " << errno << " / " << strerror(errno) << endl;
-      count = 0;
-      break;
-    }
+      if(++count > 5) {
+        cerr << "Send timeout: " << errno << " / " << strerror(errno) << endl;
+        count = 0;
+        break;
+      }
   }
 
-  int bytes_sent = 0;
-  while(bytes_sent < size) {
-    int status = ::send ( m_sock, s+bytes_sent, size-bytes_sent, tcp_send_flag );
-    if ( status == -1 ) {
-      cerr << "Socket.send error. Details: " << errno << "/"<< strerror(errno) << endl;
-      return false;
-    }
-    bytes_sent += status;
-  }
   return true;
 }
 
 
 int Socket::recv ( char* s, long long int size ) const
 {
-  struct timeval timeout;
-  timeout.tv_sec = 10;
-  timeout.tv_usec = 0;
-
   fd_set sock;
-  FD_ZERO(&sock);
-  FD_SET(m_sock,&sock);
+  struct timeval timeout;
 
   int ok = 0;
+  
   int count = 0;
-
-  while(ok<1) {
-    struct timeval timeout;
+  size_t bytes_recv = 0;
+  size_t recvsize = (size_t)size;
+  
+  while(bytes_recv < size) {
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
-    FD_ZERO(&sock);
-    FD_SET(m_sock,&sock);
+    ok = Socket_select(m_sock, 0, &sock, 0, &timeout);
+    ;
 
-    ok = select(m_sock+1, &sock, (fd_set *) 0, (fd_set *) 0, &timeout);
-    if(ok<1) {
-      usleep(50000);
-      cout << "r";
-      count=1;
-      if(ok<0) {
+    if (ok == MPWIDE_SOCKET_RDMASK) {
+      ssize_t status = ::recv( m_sock, s + bytes_recv, recvsize - bytes_recv, 0 );
+      bytes_recv -= status;
+      
+      if ( status <= 0 ) {
+        cout << "status == " << status << " errno == " << errno << "  in Socket::recv\n";
+        cout << strerror(errno) << endl;
+        return -1;
+      }
+
+      count = 0;
+    }
+    else {
+      if(ok < 0) {
         fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
-        fflush(stderr);
-        exit(-9);
+        return -1;
+      } else {
+        usleep(50000);
+        cout << "r";
+        if(++count == 1) {
+          cerr << "Recv timeout: " << errno << " / " << strerror(errno) << endl;
+          cerr << "We will keep trying to receive for a while..." << endl;
+        }
+        else if (count == 100) { /* Too many problems to get a socket. Let's just consider this receive to have failed. */
+          return -1;
+        }
       }
     }
-    else { count = 0; }
-    if(count == 1) {
-      cerr << "Recv timeout: " << errno << " / " << strerror(errno) << endl;
-      cerr << "We will keep trying to receive for a while..." << endl;
-      count++;
-    }
-    if(count == 100) { /* Too many problems to get a socket. Let's just consider this receive to have failed. */
-      return 0;
-    }
   }
 
-  int status = ::recv ( m_sock, s, size, 0 );
-
-  if ( status < 0 ) {
-    cout << "status == " << status << " errno == " << errno << "  in Socket::recv\n";
-    cout << strerror(errno) << endl;
-    return status;
-  }
-  else if ( status == 0 ) {
-    return 0;
-  }
-  else {
-    //memcpy(s,buf,size);
-    return status;
-  }
+  return size;
 }
 
 int Socket::irecv ( char* s, long long int size ) const
