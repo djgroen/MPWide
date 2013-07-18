@@ -384,19 +384,19 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     LOG_DEBUG("MPW_DNSResolve resolves " << url[i] << " to address " << MPW_DNSResolve(url[i]) << ".");
     remote_url.push_back(MPW_DNSResolve(url[i]));
     client.push_back(Socket());
-    isclient.push_back(1);
     port.push_back(ports[i]);
-    cport.push_back(cports[i]);
+    if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
+      isclient.push_back(0);
+      cport.push_back(-1);
+      LOG_INFO("Empty IP address given: Switching to Server-only mode.")
+    } else {
+      isclient.push_back(1);
+      cport.push_back(cports[i]);
+    }
 
     #if PERF_REPORT > 1
       cout << url[i] << " " << ports[i] << " " << cports[i] << endl;
     #endif
-
-    if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
-      isclient[i] = 0;
-      cport[i]    = -2;
-      LOG_INFO("Empty IP address given: Switching to Server-only mode.")
-    }
   }
 }
 
