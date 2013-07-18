@@ -46,7 +46,7 @@ class Socket
   // Server initialization
   bool create();
   bool bind ( const int port );
-  bool listen();
+  bool listen() const;
   bool accept();
 
   // Client initialization

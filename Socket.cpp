@@ -108,7 +108,7 @@ bool Socket::bind ( const int port )
 }
 
 
-bool Socket::listen()
+bool Socket::listen() const
 {
   if ( ! is_valid() )
     {
