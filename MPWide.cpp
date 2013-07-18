@@ -703,12 +703,10 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
   long long int a = 0;
   long long int b = 0;
 
-  int channel = base_channel % 65536;
-  int channel2 = channel;
-  if(base_channel > 65535) {
-    channel2 = (base_channel/65536) - 1;
-    client[channel2].set_non_blocking(true);
-  }
+  const int channel = base_channel % 65536;
+  const int channel2 = base_channel < 65536
+                     ? channel
+                     : (base_channel/65536) - 1;
 
   int mask = 0;
   while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
@@ -886,11 +884,7 @@ void *MPW_TDynEx(void *args)
   char* recvbuf = ta->recvbuf;
   int channel = ta->channel % 65536; //send channel
 
-  int channel2 = channel; //recv channel
-  if(cycling) { 
-    channel2 = (ta->channel / 65536) - 1; 
-    client[channel2].set_non_blocking(true);
-  }
+  int channel2 = cycling ? (ta->channel / 65536) - 1 : channel; //recv channel
 
   int id = ta->thread_id;
   long long int numschannels = ta->numchannels;
