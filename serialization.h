@@ -56,7 +56,10 @@ deserialize_size_t(const unsigned char *net_number)
     {
         // may cause problems if the sent size is larger than size_t max - but then the
         // memory won't be large enough to hold the data anyway.
-        assert(net_number[0] == net_number[1] == net_number[2] == net_number[3] == 0);
+        assert(net_number[0] == 0);
+        assert(net_number[1] == 0);
+        assert(net_number[2] == 0);
+        assert(net_number[3] == 0);
         assert(sizeof(size_t) >= 4);
         return ((size_t)net_number[4] << 24)
              | ((size_t)net_number[5] << 16)
