@@ -97,7 +97,7 @@ static int num_streams = 0;
 
 // This is set to true on the first invocation of MPW_Init. MPW_EMPTY is given a 1-byte buffer.
 static bool MPW_INITIALISED = false;
-char *MPW_EMPTY;
+static char *MPW_EMPTY = new char[1];
 
 /* PATH-specific definitions */
 class MPWPath {
@@ -501,8 +501,6 @@ int MPW_Init(string* url, int* ports, int* cports, int numstreams)
     cout << "Initialising..." << endl;
   #endif
 
-  MPW_EMPTY = (char*) MPWmalloc(1); //construct 'empty' buffer.
-
   int stream_indices[numstreams];
   for(int i=0; i<numstreams; i++) {
     stream_indices[i] = num_streams + i; //if this is the first MPW_Init, then num_streams still equals 0 here.
@@ -683,7 +681,7 @@ int MPW_Finalize()
   cout << "MPWide sockets are closed." << endl;
   #endif
   free(ta); //clean global thread memory
-  free(MPW_EMPTY);
+  delete [] MPW_EMPTY;
   sleep(1);
   return 1;
 }
