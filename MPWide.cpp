@@ -287,7 +287,6 @@ void* MPW_InitStream(void* args)
   int port = t.port;
   int cport = t.cport;
   bool server_wait = t.server_wait;
-  client[i].set_non_blocking(false);
 
   if(isclient[i]) {
     client[i].create();
@@ -300,25 +299,17 @@ void* MPW_InitStream(void* args)
     }
 
     /* End of patch*/
-    int status = client[i].connect(remote_url[i],port);
-    LOG_WARN("Server wait & connected " << server_wait << "," << status);
+    pt->connected = client[i].connect(remote_url[i],port);
+    LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
 
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 10000;
-    
-  #if InitStreamTimeOut > 0
-    if (!server_wait && status == EINPROGRESS) {
-      for (long long connect_counter = 0; (status == EINPROGRESS || status == EALREADY || status == EISCONN || status == EAGAIN) && connect_counter < InitStreamTimeOut; connect_counter += 10) {
-  #else
+    #if InitStreamTimeOut == 0
     if (!server_wait) {
-      while(status != 0) {
-  #endif
-        if (client[i].select_me(MPWIDE_SOCKET_RDMASK, 0, 10000))
-          status = client[i].connect(remote_url[i],port);
+      while(!pt->connected) {
+        pt->connected = client[i].connect(remote_url[i],port);
       }
     }
-    pt->connected = (status == 0);
+    #endif
+    
     #if PERF_REPORT > 1
       cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  ": " << pt->connected << endl;
     #endif
@@ -330,24 +321,29 @@ void* MPW_InitStream(void* args)
       client[i].create();
 
       #if BIND_SERVER_SOCKET == 1
-      const int bound = client[i].bind(port);
+      bool bound = client[i].bind(port);
       #if PERF_REPORT > 1
         cout << "[" << i << "] Trying to bind as server at " << (port) << ". Result = " << bound << endl;
       #endif
       
-      if (bound <= 0) {
-        LOG_WARN("Listen on ch #"<< i <<" failed.");
+      if (!bound) {
+        LOG_WARN("Bind on ch #"<< i <<" failed.");
         client[i].close();
         return NULL;
       }
-      #endif // BIND_SERVER_SOCKET
+      #endif// BIND_SERVER_SOCKET
 
       if (client[i].listen(port)) {
           pt->connected = client[i].accept();
           #if PERF_REPORT > 1
-            cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
+          cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
           #endif
           if(pt->connected) { isclient[i] = 0; }
+      }
+      else {
+        LOG_WARN("Listen on ch #"<< i <<" failed.");
+        client[i].close();
+        return NULL;
       }
     }
   }
@@ -360,9 +356,6 @@ void MPW_CloseChannels(int* channel, int numchannels)
   for(int i=0; i<numchannels; i++) {
     LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i])
     client[channel[i]].close();
-    if(!isclient[channel[i]]) {
-      client[channel[i]].closeServer();
-    }
   }
 }
 
@@ -673,9 +666,6 @@ int MPW_Finalize()
 #endif
   for(int i=0; i<num_streams; i++) {
     client[i].close();
-    if(!isclient[i]) {
-      client[i].closeServer();
-    }
   }
   #if PERFREPORT > 0
   cout << "MPWide sockets are closed." << endl;
@@ -719,7 +709,6 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
     channel2 = (base_channel/65536) - 1;
     client[channel2].set_non_blocking(true);
   }
-  client[channel].set_non_blocking(true); 
 
   int mask = 0;
   while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
@@ -786,9 +775,6 @@ void* MPW_Relay(void* args)
   char* buf      = (char *) malloc(bufsize);
   char* buf2     = (char *) malloc(bufsize);
   
-  client[channel].set_non_blocking(true);   
-  client[channel2].set_non_blocking(true); 
-
   #if PERF_REPORT > 1
   cout << "Starting Relay Channel #" << channel << endl;
   #endif
@@ -901,7 +887,6 @@ void *MPW_TDynEx(void *args)
   int channel = ta->channel % 65536; //send channel
 
   int channel2 = channel; //recv channel
-  client[channel].set_non_blocking(true);
   if(cycling) { 
     channel2 = (ta->channel / 65536) - 1; 
     client[channel2].set_non_blocking(true);

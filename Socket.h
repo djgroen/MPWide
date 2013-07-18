@@ -50,7 +50,7 @@ class Socket
   bool accept();
 
   // Client initialization
-  int connect ( const std::string host, const int port );
+  bool connect ( const std::string host, const int port );
 
   // Data Transimission
   bool send (const char* s, long long int size ) const;
@@ -64,7 +64,6 @@ class Socket
   int select_me (int mask) const;
   int select_me (int mask, int timeout_val) const;
   int select_me (int mask, int timeout_s, int timeout_u) const;
-  int select_server (int mask, int timeout_s, int timeout_u) const;
 
   void set_non_blocking ( const bool );
   void setWin(int size);
@@ -72,13 +71,11 @@ class Socket
   bool is_valid() const { return m_sock != -1; }
 
   void close();
-  void closeServer();
 
   int getSock() const { return m_sock; }
 
  private:
   int m_sock;
-  int s_sock; //socket descriptor for server.
   sockaddr_in m_addr;
   #ifdef MSG_NOSIGNAL
     static const int tcp_send_flag = MSG_NOSIGNAL;
