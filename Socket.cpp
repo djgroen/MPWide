@@ -20,6 +20,7 @@
  * **************************************************************/
 
 #define REPORT_BUFFERSIZES 0
+#define EXIT_ON_ERROR
 
 #include "Socket.h"
 #include "string.h"
@@ -196,7 +197,9 @@ bool Socket::send ( const char* s, long long int size ) const
       if(ok<0) {
         fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
         fflush(stderr);
-        exit(-9);
+        #ifdef EXIT_ON_ERROR
+        exit(9);
+        #endif
         }
       }
       if(++count > 5) {
@@ -263,8 +266,9 @@ int Socket::irecv ( char* s, long long int size ) const
   int status = ::recv ( m_sock, s, size, 0 );
   if ( status < 0 ) {
     cout << "irecv: status = " << status << " errno = " << errno << "/" << strerror(errno) << endl;
-    return 0;
-    exit(-1);
+    #ifdef EXIT_ON_ERROR
+    exit(1);
+    #endif
   }
   return status;
 }
@@ -274,8 +278,9 @@ int Socket::isend ( const char* s, long long int size ) const
   int status = ::send ( m_sock, s, size, tcp_send_flag );
   if ( status < 0 ) {
     cerr << "isend: status = " << status << " errno = " << errno << "/"<< strerror(errno) << endl;
-    exit(-1);
-    return 0;
+    #ifdef EXIT_ON_ERROR
+    exit(1);
+    #endif
   }
   return status;
 }
