@@ -149,7 +149,7 @@ static int relay_rsize = 8*1024;
   }
 #endif
 
-typedef struct thread_tmp{
+typedef struct thread_tmp {
   long long int sendsize, recvsize;
   long long int* dyn_recvsize; //For DynEx.
   int thread_id;
@@ -270,7 +270,7 @@ void *MPW_TBandwidth_Monitor(void *args)
 #endif
 
 typedef struct init_tmp {
-  int i;
+  int stream;
   int port;
   int cport;
   bool server_wait;
@@ -282,64 +282,65 @@ void* MPW_InitStream(void* args)
   init_tmp t = *((init_tmp *) args);
   init_tmp *pt = ((init_tmp *) args);
 
-  int i = t.i;
+  int stream = t.stream;
   int port = t.port;
   int cport = t.cport;
   bool server_wait = t.server_wait;
 
-  if(isclient[i]) {
-    client[i].create();
+  if(isclient[stream]) {
+    client[stream].create();
     /* Patch to bypass firewall problems. */
     if(cport>0) {
       #if PERF_REPORT > 1
-        cout << "[" << i << "] Trying to bind as client at " << (cport) << endl;
+        cout << "[" << stream << "] Trying to bind as client at " << (cport) << endl;
       #endif
-      int bound = client[i].bind(cport);
+      int bound = client[stream].bind(cport);
     }
 
     /* End of patch*/
-    pt->connected = client[i].connect(remote_url[i],port);
+    pt->connected = client[stream].connect(remote_url[stream],port);
     LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
 
     #if InitStreamTimeOut == 0
     if (!server_wait) {
       while(!pt->connected) {
-        pt->connected = client[i].connect(remote_url[i],port);
+        usleep(50000);
+        pt->connected = client[stream].connect(remote_url[stream],port);
       }
     }
     #endif
     
     #if PERF_REPORT > 1
-      cout << "[" << i << "] Attempt to connect as client to " << remote_url[i] <<" at port " << port <<  ": " << pt->connected << endl;
+      cout << "[" << stream << "] Attempt to connect as client to " << remote_url[stream] <<" at port " << port <<  ": " << pt->connected << endl;
     #endif
   }
  
   if(!pt->connected) {
-    client[i].close();
-    if(server_wait) {
-      client[i].create();
+    client[stream].close();
+    if (server_wait) {
+      client[stream].create();
 
-      bool bound = client[i].bind(port);
+      bool bound = client[stream].bind(port);
       #if PERF_REPORT > 1
-        cout << "[" << i << "] Trying to bind as server at " << (port) << ". Result = " << bound << endl;
+        cout << "[" << stream << "] Trying to bind as server at " << (port) << ". Result = " << bound << endl;
       #endif
       
       if (!bound) {
-        LOG_WARN("Bind on ch #"<< i <<" failed.");
-        client[i].close();
+        LOG_WARN("Bind on ch #"<< stream <<" failed.");
+        client[stream].close();
         return NULL;
       }
 
-      if (client[i].listen()) {
-          pt->connected = client[i].accept();
+      if (client[stream].listen()) {
+          pt->connected = client[stream].accept();
           #if PERF_REPORT > 1
-          cout <<  "[" << i << "] Attempt to act as server: " << pt->connected << endl;
+          cout <<  "[" << stream << "] Attempt to act as server: " << pt->connected << endl;
           #endif
-          if(pt->connected) { isclient[i] = 0; }
+          if (pt->connected) { isclient[stream] = 0; }
       }
       else {
-        LOG_WARN("Listen on ch #"<< i <<" failed.");
-        client[i].close();
+        LOG_WARN("Listen on ch #"<< stream <<" failed.");
+        client[stream].close();
         return NULL;
       }
     }
@@ -364,10 +365,11 @@ void MPW_ReOpenChannels(int* channel, int numchannels)
   init_tmp t[numchannels];
 
   for(int i = 0; i < numchannels; i++) {
-    t[i].i    = channel[i];
-    t[i].port = port[channel[i]];
-    t[i].cport = cport[channel[i]];
-    LOG_INFO("ReOpening client channel #" << channel[i] << " with port = " << port[channel[i]] << " and cport = " << cport[channel[i]])
+    int stream = channel[i];
+    t[i].stream    = stream;
+    t[i].port = port[stream];
+    t[i].cport = cport[stream];
+    LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream])
     int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
   }
 
@@ -385,6 +387,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     remote_url.push_back(MPW_DNSResolve(url[i]));
     client.push_back(Socket());
     port.push_back(ports[i]);
+    
     if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
       isclient.push_back(0);
       cport.push_back(-1);
@@ -405,9 +408,10 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   init_tmp t[numstreams];
 
   for(int i = 0; i < numstreams; i++) {
-    t[i].i    = stream_indices[i];
-    t[i].port = port[i];
-    t[i].cport = cport[i];
+    int stream = stream_indices[i];
+    t[i].stream     = stream;
+    t[i].port  = port[stream];
+    t[i].cport = cport[stream];
     t[i].server_wait = server_wait;
     t[i].connected = false;
     if(i>0) {
@@ -425,7 +429,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   bool all_connected = true;
   for(int i = 0; i < numstreams; i++) {
     if(t[i].connected == false) {
-      LOG_WARN("One connection has failed: #" << i);
+      LOG_WARN("One connection has failed: #" << stream_indices[i]);
       all_connected = false;
     }
   }
@@ -467,7 +471,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   LOG_INFO("-----------------------------------------------------------")
   LOG_INFO("END OF SETUP PHASE.")
 
-  if(MPW_INITIALISED == false) {
+  if (MPW_INITIALISED == false) {
     MPW_INITIALISED = true;
     #ifdef PERF_TIMING
     #if MONITORING == 1
