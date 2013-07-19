@@ -41,6 +41,7 @@ class Socket
 {
  public:
   Socket();
+  Socket(const Socket& sock);
   virtual ~Socket();
 
   // Server initialization
@@ -76,6 +77,7 @@ class Socket
 
  private:
   int m_sock;
+  int *refs;
   sockaddr_in m_addr;
   #ifdef MSG_NOSIGNAL
     static const int tcp_send_flag = MSG_NOSIGNAL;

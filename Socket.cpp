@@ -42,12 +42,21 @@ Socket::Socket() :
 {
   memset(&m_addr, 0, sizeof( m_addr ));
   set_non_blocking(false);
+  refs = new int(1);
+}
+
+Socket::Socket(const Socket& other) : m_sock(other.m_sock), m_addr(other.m_addr), refs(other.refs)
+{
+  ++(*refs);
 }
 
 Socket::~Socket()
 {
-  if ( is_valid() )
-    ::close ( m_sock );
+  if (--(*refs) == 0) {
+    if ( is_valid() )
+      ::close ( m_sock );
+    delete refs;
+  }
 }
 
 bool Socket::create()
