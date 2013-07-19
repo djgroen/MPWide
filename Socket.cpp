@@ -225,8 +225,6 @@ int Socket::recv ( char* s, long long int size ) const
     timeout.tv_sec = 10;
     timeout.tv_usec = 0;
     ok = Socket_select(m_sock, 0, &sock, 0, &timeout);
-    ;
-
     if (ok == MPWIDE_SOCKET_RDMASK) {
       ssize_t status = ::recv( m_sock, s + bytes_recv, recvsize - bytes_recv, 0 );
       bytes_recv -= status;
