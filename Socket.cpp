@@ -126,10 +126,10 @@ bool Socket::listen() const
     }
   int listen_return = ::listen ( m_sock, MAXCONNECTIONS );
   if ( listen_return == -1 )
-    {
-      cout << "listen: Failed to listen." << endl;
-      return false;
-    }
+  {
+    cout << "listen failed: " << string(strerror(errno)) << "/" << errno << endl;
+    return false;
+  }
 
   #if REPORT_BUFFERSIZES > 0
   int tcp_sbuf = 0;
@@ -152,8 +152,7 @@ bool Socket::accept()
   m_sock = new_m_sock;
   
   if ( m_sock <= 0 ) {
-    cout << "accept: Failed to accept. Returns " << m_sock << endl;
-    cout << "errno = " << errno << ". Message is: " << strerror(errno) << endl;
+    cout << "accept failed: " << string(strerror(errno)) << "/" << errno << endl;
     return false;
   }
   else {
