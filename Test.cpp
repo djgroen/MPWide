@@ -112,12 +112,12 @@ int main(int argc, char** argv){
     if(comm_mode==0) {
       //MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
       if(is_server == 0) {
-        MPW_SendRecv(msg,1,msg2,len,path_id);
-        MPW_SendRecv(msg,len,msg2,1,path_id);
+        MPW_SendRecv(msg2,1024,msg,len,path_id);
+        MPW_SendRecv(msg,len,msg2,1024,path_id);
       }
       else {
-        MPW_SendRecv(msg,len,msg2,1,path_id);
-        MPW_SendRecv(msg,1,msg2,len,path_id);
+        MPW_SendRecv(msg,len,msg2,1024,path_id);
+        MPW_SendRecv(msg,1024,msg2,len,path_id);
       }
     }
     else if(comm_mode == 1) {
