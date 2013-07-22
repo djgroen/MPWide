@@ -33,8 +33,6 @@
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
 #define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
 
-static int Socket_select(int rs, int ws, fd_set *rsock, fd_set *wsock, struct timeval *timeout);
-
 using namespace std;
 
 Socket::Socket() :
@@ -164,9 +162,6 @@ bool Socket::accept()
 
 bool Socket::send ( const char* s, long long int size ) const
 {
-  fd_set sock;
-  struct timeval timeout;
-
   /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
   int ok = 0;
 
@@ -175,9 +170,7 @@ bool Socket::send ( const char* s, long long int size ) const
   size_t sendsize = (size_t)size;
 
   while(bytes_sent < size) {
-    timeout.tv_sec = 10;
-    timeout.tv_usec = 0;
-    ok = Socket_select(0, m_sock, 0, &sock, &timeout);
+    ok = Socket_select(0, m_sock, MPWIDE_SOCKET_RDMASK, 10, 0);
 ;
     if (ok == MPWIDE_SOCKET_WRMASK) {
       count = 0;
@@ -212,9 +205,6 @@ bool Socket::send ( const char* s, long long int size ) const
 
 int Socket::recv ( char* s, long long int size ) const
 {
-  fd_set sock;
-  struct timeval timeout;
-
   int ok = 0;
   
   int count = 0;
@@ -222,9 +212,7 @@ int Socket::recv ( char* s, long long int size ) const
   size_t recvsize = (size_t)size;
   
   while(bytes_recv < size) {
-    timeout.tv_sec = 10;
-    timeout.tv_usec = 0;
-    ok = Socket_select(m_sock, 0, &sock, 0, &timeout);
+    ok = Socket_select(m_sock, 0, MPWIDE_SOCKET_WRMASK, 10, 0);
     if (ok == MPWIDE_SOCKET_RDMASK) {
       ssize_t status = ::recv( m_sock, s + bytes_recv, recvsize - bytes_recv, 0 );
       bytes_recv -= status;
@@ -392,47 +380,31 @@ int Socket_select(int rs, int ws, int mask, int timeout_s, int timeout_u)
     struct timeval timeout;
     timeout.tv_sec  = timeout_s;
     timeout.tv_usec = timeout_u;
-  
-    if (mask == MPWIDE_SOCKET_RDMASK) {
-      fd_set wsock;
-      return Socket_select(0, ws, 0, &wsock, &timeout);
-    }
-    else if (mask == MPWIDE_SOCKET_WRMASK) {
-      fd_set rsock;
-      return Socket_select(rs, 0, &rsock, 0, &timeout);
-    }
-    else if (mask == 0) {
-      fd_set rsock, wsock;
-      return Socket_select(rs, ws, &rsock, &wsock, &timeout);
-    }
-    else return 0;
-}
-
-static int Socket_select(int rs, int ws, fd_set *rsock, fd_set *wsock, struct timeval *timeout)
-{
-  int access = 0;
-  if (rsock) {
-    FD_ZERO(rsock);
-    FD_SET(rs,rsock);
-  }
-  if (wsock) {
-    FD_ZERO(wsock);
-    FD_SET(ws,wsock);
-  }
-  
-  /* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
-  const int ok = select(max(rs, ws)+1, rsock, wsock, (fd_set *) 0, timeout);
-  if(ok > 0) {
-    if (rsock && FD_ISSET(rs,rsock)) {
-      access = MPWIDE_SOCKET_RDMASK; // access is always zero by this time
-    }
-    if (wsock && FD_ISSET(ws,wsock)) {
-      access |= MPWIDE_SOCKET_WRMASK;
-    }
-  }
-  else if (ok<0){
-    cout << "select_me error: " << errno << " Msg: " << strerror(errno) << endl;
-    return -1;
-  }
-  return access;
+	
+  	fd_set *rsock = 0, *wsock = 0;
+	fd_set rfd, wfd;
+	
+	if ((mask&MPWIDE_SOCKET_RDMASK) != MPWIDE_SOCKET_RDMASK) {
+		rsock = (fd_set *)&rfd;
+		FD_ZERO(rsock);
+		FD_SET(rs,rsock);
+	}
+	if ((mask&MPWIDE_SOCKET_WRMASK) != MPWIDE_SOCKET_WRMASK) {
+		wsock = (fd_set *)&wfd;
+		FD_ZERO(wsock);
+		FD_SET(ws,wsock);
+	}
+	
+	/* args: FD_SETSIZE,writeset,readset,out-of-band sent, timeout*/
+	const int ok = select(max(rs, ws)+1, rsock, wsock, (fd_set *)0, &timeout);
+	
+	if(ok > 0) {
+		return (rsock && FD_ISSET(rs,rsock) ? MPWIDE_SOCKET_RDMASK : 0)
+		| (wsock && FD_ISSET(ws,wsock) ? MPWIDE_SOCKET_WRMASK : 0);
+	} else if (ok == 0)	{
+		return 0;
+	} else {
+		printf("select_me: %s/%d Msg: ", strerror(errno), errno);
+		return -1;
+	}
 }
