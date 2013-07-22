@@ -571,16 +571,16 @@ int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long lon
   return MPW_DSendRecv(sendbuf, sendsize, recvbuf, maxrecvsize, paths[path].streams, paths[path].num_streams);
 }
 
-void MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
-  MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
+int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
+  return MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
 }
 
-void MPW_Send(char* sendbuf, long long int sendsize, int path) {
-  MPW_SendRecv(sendbuf, sendsize, MPW_EMPTY, 1, paths[path].streams, paths[path].num_streams);
+int MPW_Send(char* sendbuf, long long int sendsize, int path) {
+  return MPW_SendRecv(sendbuf, sendsize, MPW_EMPTY, 1, paths[path].streams, paths[path].num_streams);
 }
 
-void MPW_Recv(char* recvbuf, long long int recvsize, int path) {
-  MPW_SendRecv(MPW_EMPTY, 1, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
+int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
+  return MPW_SendRecv(MPW_EMPTY, 1, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
 }
 
 
@@ -652,8 +652,9 @@ void MPW_Recv(char* buf, long long int size, int* channels, int num_channels)
 }
 
 /* Send/Recv between two processes. */
-void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel)
+int *InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel)
 {
+  int *ret = new int(0);
 
 #ifdef PERF_TIMING
   double t = GetTime();
@@ -675,6 +676,13 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_RDMASK)) {
       int n = client[channel2].irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
+      if (n <= 0) {
+        if (n == 0)
+          *ret = -1;
+        else
+          *ret = -errno;
+        break;
+      }
       b += n;
       #if MONITORING == 1
       bytes_sent += n;
@@ -686,6 +694,12 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_WRMASK)) {
       int n = client[channel].isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
+
+      if (n < 0) {
+        *ret = -errno;
+        break;
+      }
+      
       a += n;
       #if MONITORING == 1
       bytes_sent += n;
@@ -707,6 +721,7 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
     #endif
   SendRecvTime += t;
   #endif
+  return ret;
 }
 
 typedef struct relay_struct{
@@ -955,9 +970,7 @@ void *MPW_TDynEx(void *args)
 void *MPW_TSendRecv(void *args)
 {
   thread_tmp *t = (thread_tmp *)args;
-  InThreadSendRecv(t->sendbuf, t->sendsize, t->recvbuf, t->recvsize, t->channel);
-
-  return NULL;
+  return InThreadSendRecv(t->sendbuf, t->sendsize, t->recvbuf, t->recvsize, t->channel);
 }
 
 /* DSendRecv: MPWide Low-level dynamic exchange. 
@@ -1137,15 +1150,25 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
 
   if(dynamic) {
     MPW_TDynEx(&ta[0]);
+    if(max(nc_send,nc_recv)>1) {
+      for(int i=1; i<max(nc_send,nc_recv); i++) {
+        pthread_join(streams[i], NULL);
+      }
+    }
   } else {
-    MPW_TSendRecv(&ta[0]);
-  }
+    int* res = (int *)MPW_TSendRecv(&ta[0]);
+    // TODO: error checking on MPW_TSendRecv
+    delete res;
 
-  if(max(nc_send,nc_recv)>1) {
-    for(int i=1; i<max(nc_send,nc_recv); i++) {
-      pthread_join(streams[i], NULL);
+    if(max(nc_send,nc_recv)>1) {
+      for(int i=1; i<max(nc_send,nc_recv); i++) {
+        pthread_join(streams[i], (void **)&res);
+        // TODO: error checking on MPW_TSendRecv
+        delete res;
+      }
     }
   }
+
 
   #ifdef PERF_TIMING
   t = GetTime() - t;
@@ -1213,7 +1236,7 @@ void MPW_Cycle(char* sendbuf, long long int sendsize, char* recvbuf, long long i
   MPW_Cycle(sendbuf, sendsize, recvbuf, maxrecvsize, ch_send, num_ch_send, ch_recv, num_ch_recv, false);
 }
 
-void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels)
+int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels)
 {
 #ifdef PERF_TIMING
   double t = GetTime();
@@ -1233,12 +1256,19 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
       int code = pthread_create(&streams[i], NULL, MPW_TSendRecv, &ta[i]);
     }
   }
-
-  MPW_TSendRecv(&ta[0]);
+  
+  int return_value = 0;
+  int *res = (int *)MPW_TSendRecv(&ta[0]);
+  if (*res < 0)
+    return_value = *res;
+  delete res;
 
   if(num_channels>1) {
     for(int i=1; i<num_channels; i++) {
-      pthread_join(streams[i], NULL);
+      pthread_join(streams[i], (void **)&res);
+      if (*res < 0)
+        return_value = *res;
+      delete res;
     }
   }
 
@@ -1254,9 +1284,10 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
     #endif
     SendRecvTime += t;
   #endif
+  return return_value;
 }
 
-void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int* channel, int nc){
+int MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int* channel, int nc){
 
 #if SendRecvInputReport == 1
   cout << "MPW_SendRecv(sendsize=" << sendsize << ",recvsize=" << recvsize << ",nc=" << nc << ");" << endl;
@@ -1299,12 +1330,13 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
     offset2 += iii;
   }
 
-  MPW_PSendRecv( sendbuf2, sendsize2, recvbuf2, recvsize2, channel, nc);
+  int ret = MPW_PSendRecv( sendbuf2, sendsize2, recvbuf2, recvsize2, channel, nc);
 
   delete [] sendbuf2;
   delete [] recvbuf2;
   delete [] sendsize2;
   delete [] recvsize2;
+  return ret;
 }
 
 /* Synchronization functions: try to minimize the use of this function. */
