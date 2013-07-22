@@ -31,7 +31,8 @@
 #include <vector>
 #include <unistd.h>
 
-#define SendRecvInputReport 0
+#include "mpwide-macros.h"
+
 int MPWideAutoTune = 1;
 
 void MPW_setAutoTuning(bool b) {
@@ -42,46 +43,6 @@ void MPW_setAutoTuning(bool b) {
     MPWideAutoTune = 0;
   }
 }
-
-/* Enable (define)/Disable(don't define) Performance Timing Measurements */
-#define PERF_TIMING
-/* Performance report verbosity: 1 reports speeds on send/recv. 2 reports on initialization details.
-   3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
-   reports for accumulated bytes after every chunk is received. */
-#define PERF_REPORT 2
-
-#define LVL_ERR 0
-#define LVL_WARN 2
-#define LVL_INFO 4
-#define LVL_DEBUG 6
-#define MONITORING 1
-
-#define LOG_LVL LVL_INFO
-
-#if LOG_LVL >= LVL_ERR
-  #define LOG_ERR(MSG) cout << MSG << endl;
-#else
-  #define LOG_ERR(MSG)
-#endif
-#if LOG_LVL >= LVL_WARN
-  #define LOG_WARN(MSG) cout << MSG << endl;
-#else
-  #define LOG_WARN(MSG)
-#endif
-#if LOG_LVL >= LVL_INFO
-  #define LOG_INFO(MSG) cout << MSG << endl;
-#else
-  #define LOG_INFO(MSG)
-#endif
-#if LOG_LVL >= LVL_DEBUG
-  #define LOG_DEBUG(MSG) cout << MSG << endl;
-#else
-  #define LOG_DEBUG(MSG)
-#endif
-
-#define max(X,Y) ((X) > (Y) ? (X) : (Y))
-#define min(X,Y) ((X) < (Y) ? (X) : (Y))
-#define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
 
 using namespace std;
 
@@ -144,7 +105,7 @@ static int relay_rsize = 8*1024;
     else {
       pacing_rate = rate;
       pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
-      LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.")
+      LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.");
     }
   }
 #endif
@@ -175,7 +136,7 @@ static thread_tmp* ta;
   void MPW_setChunkSize(int sending, int receiving) {
     tcpbuf_ssize = sending;
     tcpbuf_rsize = receiving;
-    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".")
+    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
   }
 
   double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
@@ -207,11 +168,11 @@ char *MPW_DNSResolve(char *host){
   }
   if(host_info) {
     const in_addr* address = (in_addr*)host_info->h_addr_list[0] ;
-    LOG_DEBUG(" address found: " << inet_ntoa( *address ))
+    LOG_DEBUG(" address found: " << inet_ntoa( *address ));
     host = (char*) (inet_ntoa(*address));
     return host;
   }
-  LOG_ERR("Error: Unable to resolve host name")
+  LOG_ERR("Error: Unable to resolve host name");
   return NULL;
 }
 
@@ -352,7 +313,7 @@ void* MPW_InitStream(void* args)
 void MPW_CloseChannels(int* channel, int numchannels) 
 {
   for(int i=0; i<numchannels; i++) {
-    LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i])
+    LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i]);
     client[channel[i]].close();
   }
 }
@@ -369,7 +330,7 @@ void MPW_ReOpenChannels(int* channel, int numchannels)
     t[i].stream    = stream;
     t[i].port = port[stream];
     t[i].cport = cport[stream];
-    LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream])
+    LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream]);
     int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
   }
 
@@ -391,7 +352,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
       isclient.push_back(0);
       cport.push_back(-1);
-      LOG_INFO("Empty IP address given: Switching to Server-only mode.")
+      LOG_INFO("Empty IP address given: Switching to Server-only mode.");
     } else {
       isclient.push_back(1);
       cport.push_back(cports[i]);
@@ -456,20 +417,20 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
     }
   }
 
-  LOG_INFO("-----------------------------------------------------------")
-  LOG_INFO("MPWide Settings:")
-  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize)
-  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize)
-  LOG_INFO("Number of streams       : " << num_streams)
-  LOG_INFO("tcp buffer parameter    : " << WINSIZE)
-  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.")
+  LOG_INFO("-----------------------------------------------------------");
+  LOG_INFO("MPWide Settings:");
+  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize);
+  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize);
+  LOG_INFO("Number of streams       : " << num_streams);
+  LOG_INFO("tcp buffer parameter    : " << WINSIZE);
+  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.");
 #ifdef MONITORING
-  LOG_INFO("bandwidth monitoring    : " << MONITORING)
+  LOG_INFO("bandwidth monitoring    : " << MONITORING);
 #else
   LOG_INFO("bandwidth monitoring    : 0")
 #endif
-  LOG_INFO("-----------------------------------------------------------")
-  LOG_INFO("END OF SETUP PHASE.")
+  LOG_INFO("-----------------------------------------------------------");
+  LOG_INFO("END OF SETUP PHASE.");
 
   if (MPW_INITIALISED == false) {
     MPW_INITIALISED = true;
@@ -610,16 +571,16 @@ int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long lon
   return MPW_DSendRecv(sendbuf, sendsize, recvbuf, maxrecvsize, paths[path].streams, paths[path].num_streams);
 }
 
-void MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
-  MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
+int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
+  return MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
 }
 
-void MPW_Send(char* sendbuf, long long int sendsize, int path) {
-  MPW_SendRecv(sendbuf, sendsize, MPW_EMPTY, 1, paths[path].streams, paths[path].num_streams);
+int MPW_Send(char* sendbuf, long long int sendsize, int path) {
+  return MPW_SendRecv(sendbuf, sendsize, MPW_EMPTY, 1, paths[path].streams, paths[path].num_streams);
 }
 
-void MPW_Recv(char* recvbuf, long long int recvsize, int path) {
-  MPW_SendRecv(MPW_EMPTY, 1, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
+int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
+  return MPW_SendRecv(MPW_EMPTY, 1, recvbuf, recvsize,  paths[path].streams, paths[path].num_streams);
 }
 
 
@@ -691,15 +652,13 @@ void MPW_Recv(char* buf, long long int size, int* channels, int num_channels)
 }
 
 /* Send/Recv between two processes. */
-void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel)
+int *InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel)
 {
+  int *ret = new int(0);
 
 #ifdef PERF_TIMING
   double t = GetTime();
 #endif
-
-  assert(sendsize > 0);
-  assert(recvsize > 0);
 
   long long int a = 0;
   long long int b = 0;
@@ -709,12 +668,21 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
                      ? channel
                      : (base_channel/65536) - 1;
 
-  int mask = 0;
+  int mask = (recvsize == 0 ? MPWIDE_SOCKET_RDMASK : 0)
+           | (sendsize == 0 ? MPWIDE_SOCKET_WRMASK : 0);
+  
   while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
-    int mode = selectSockets(channel,channel2,mask);
+    const int mode = selectSockets(channel,channel2,mask);
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_RDMASK)) {
       int n = client[channel2].irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
+      if (n <= 0) {
+        if (n == 0)
+          *ret = -1;
+        else
+          *ret = -errno;
+        break;
+      }
       b += n;
       #if MONITORING == 1
       bytes_sent += n;
@@ -726,6 +694,12 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_WRMASK)) {
       int n = client[channel].isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
+
+      if (n < 0) {
+        *ret = -errno;
+        break;
+      }
+      
       a += n;
       #if MONITORING == 1
       bytes_sent += n;
@@ -747,6 +721,7 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
     #endif
   SendRecvTime += t;
   #endif
+  return ret;
 }
 
 typedef struct relay_struct{
@@ -995,9 +970,7 @@ void *MPW_TDynEx(void *args)
 void *MPW_TSendRecv(void *args)
 {
   thread_tmp *t = (thread_tmp *)args;
-  InThreadSendRecv(t->sendbuf, t->sendsize, t->recvbuf, t->recvsize, t->channel);
-
-  return NULL;
+  return InThreadSendRecv(t->sendbuf, t->sendsize, t->recvbuf, t->recvsize, t->channel);
 }
 
 /* DSendRecv: MPWide Low-level dynamic exchange. 
@@ -1067,7 +1040,7 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 void MPW_splitBuf(char* buf, long long int bsize, int num_chunks, char** split_buf, long long int* chunk_sizes) {
 
   if(num_chunks < 1) { 
-    LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.")
+    LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.");
     exit(0);
   }
   size_t bsize_each = size_t(bsize / num_chunks);
@@ -1177,15 +1150,25 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
 
   if(dynamic) {
     MPW_TDynEx(&ta[0]);
+    if(max(nc_send,nc_recv)>1) {
+      for(int i=1; i<max(nc_send,nc_recv); i++) {
+        pthread_join(streams[i], NULL);
+      }
+    }
   } else {
-    MPW_TSendRecv(&ta[0]);
-  }
+    int* res = (int *)MPW_TSendRecv(&ta[0]);
+    // TODO: error checking on MPW_TSendRecv
+    delete res;
 
-  if(max(nc_send,nc_recv)>1) {
-    for(int i=1; i<max(nc_send,nc_recv); i++) {
-      pthread_join(streams[i], NULL);
+    if(max(nc_send,nc_recv)>1) {
+      for(int i=1; i<max(nc_send,nc_recv); i++) {
+        pthread_join(streams[i], (void **)&res);
+        // TODO: error checking on MPW_TSendRecv
+        delete res;
+      }
     }
   }
+
 
   #ifdef PERF_TIMING
   t = GetTime() - t;
@@ -1253,7 +1236,7 @@ void MPW_Cycle(char* sendbuf, long long int sendsize, char* recvbuf, long long i
   MPW_Cycle(sendbuf, sendsize, recvbuf, maxrecvsize, ch_send, num_ch_send, ch_recv, num_ch_recv, false);
 }
 
-void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels)
+int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels)
 {
 #ifdef PERF_TIMING
   double t = GetTime();
@@ -1273,12 +1256,19 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
       int code = pthread_create(&streams[i], NULL, MPW_TSendRecv, &ta[i]);
     }
   }
-
-  MPW_TSendRecv(&ta[0]);
+  
+  int return_value = 0;
+  int *res = (int *)MPW_TSendRecv(&ta[0]);
+  if (*res < 0)
+    return_value = *res;
+  delete res;
 
   if(num_channels>1) {
     for(int i=1; i<num_channels; i++) {
-      pthread_join(streams[i], NULL);
+      pthread_join(streams[i], (void **)&res);
+      if (*res < 0)
+        return_value = *res;
+      delete res;
     }
   }
 
@@ -1294,9 +1284,10 @@ void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long
     #endif
     SendRecvTime += t;
   #endif
+  return return_value;
 }
 
-void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int* channel, int nc){
+int MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int* channel, int nc){
 
 #if SendRecvInputReport == 1
   cout << "MPW_SendRecv(sendsize=" << sendsize << ",recvsize=" << recvsize << ",nc=" << nc << ");" << endl;
@@ -1339,12 +1330,13 @@ void MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lo
     offset2 += iii;
   }
 
-  MPW_PSendRecv( sendbuf2, sendsize2, recvbuf2, recvsize2, channel, nc);
+  int ret = MPW_PSendRecv( sendbuf2, sendsize2, recvbuf2, recvsize2, channel, nc);
 
   delete [] sendbuf2;
   delete [] recvbuf2;
   delete [] sendsize2;
   delete [] recvsize2;
+  return ret;
 }
 
 /* Synchronization functions: try to minimize the use of this function. */
