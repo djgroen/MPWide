@@ -105,7 +105,7 @@ static int relay_rsize = 8*1024;
     else {
       pacing_rate = rate;
       pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
-      LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.")
+      LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.");
     }
   }
 #endif
@@ -136,7 +136,7 @@ static thread_tmp* ta;
   void MPW_setChunkSize(int sending, int receiving) {
     tcpbuf_ssize = sending;
     tcpbuf_rsize = receiving;
-    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".")
+    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
   }
 
   double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
@@ -313,7 +313,7 @@ void* MPW_InitStream(void* args)
 void MPW_CloseChannels(int* channel, int numchannels) 
 {
   for(int i=0; i<numchannels; i++) {
-    LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i])
+    LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i]);
     client[channel[i]].close();
   }
 }
@@ -330,7 +330,7 @@ void MPW_ReOpenChannels(int* channel, int numchannels)
     t[i].stream    = stream;
     t[i].port = port[stream];
     t[i].cport = cport[stream];
-    LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream])
+    LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream]);
     int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
   }
 
@@ -352,7 +352,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
       isclient.push_back(0);
       cport.push_back(-1);
-      LOG_INFO("Empty IP address given: Switching to Server-only mode.")
+      LOG_INFO("Empty IP address given: Switching to Server-only mode.");
     } else {
       isclient.push_back(1);
       cport.push_back(cports[i]);
@@ -417,20 +417,20 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
     }
   }
 
-  LOG_INFO("-----------------------------------------------------------")
-  LOG_INFO("MPWide Settings:")
-  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize)
-  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize)
-  LOG_INFO("Number of streams       : " << num_streams)
-  LOG_INFO("tcp buffer parameter    : " << WINSIZE)
-  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.")
+  LOG_INFO("-----------------------------------------------------------");
+  LOG_INFO("MPWide Settings:");
+  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize);
+  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize);
+  LOG_INFO("Number of streams       : " << num_streams);
+  LOG_INFO("tcp buffer parameter    : " << WINSIZE);
+  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.");
 #ifdef MONITORING
-  LOG_INFO("bandwidth monitoring    : " << MONITORING)
+  LOG_INFO("bandwidth monitoring    : " << MONITORING);
 #else
   LOG_INFO("bandwidth monitoring    : 0")
 #endif
-  LOG_INFO("-----------------------------------------------------------")
-  LOG_INFO("END OF SETUP PHASE.")
+  LOG_INFO("-----------------------------------------------------------");
+  LOG_INFO("END OF SETUP PHASE.");
 
   if (MPW_INITIALISED == false) {
     MPW_INITIALISED = true;
