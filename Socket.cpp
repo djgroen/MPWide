@@ -69,15 +69,12 @@ bool Socket::create()
     return false;
   }
 
-  /* Setting a window size. */
-  if(WINSIZE > 0) {
-    setsockopt(m_sock, SOL_SOCKET, SO_SNDBUF, (char *) &WINSIZE, sizeof(WINSIZE));
-    setsockopt(m_sock, SOL_SOCKET, SO_RCVBUF, (char *) &WINSIZE, sizeof(WINSIZE));
-  }
-
+  setWin(WINSIZE);
+  
   return true;
 }
 
+/* Setting a window size. */
 void Socket::setWin(int size)
 {
   if(size > 0) {
