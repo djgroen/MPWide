@@ -698,9 +698,6 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
   double t = GetTime();
 #endif
 
-  assert(sendsize > 0);
-  assert(recvsize > 0);
-
   long long int a = 0;
   long long int b = 0;
 
@@ -709,9 +706,11 @@ void InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
                      ? channel
                      : (base_channel/65536) - 1;
 
-  int mask = 0;
+  int mask = (recvsize == 0 ? MPWIDE_SOCKET_RDMASK : 0)
+           | (sendsize == 0 ? MPWIDE_SOCKET_WRMASK : 0);
+  
   while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
-    int mode = selectSockets(channel,channel2,mask);
+    const int mode = selectSockets(channel,channel2,mask);
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_RDMASK)) {
       int n = client[channel2].irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
