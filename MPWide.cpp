@@ -31,7 +31,8 @@
 #include <vector>
 #include <unistd.h>
 
-#define SendRecvInputReport 0
+#include "mpwide-macros.h"
+
 int MPWideAutoTune = 1;
 
 void MPW_setAutoTuning(bool b) {
@@ -42,46 +43,6 @@ void MPW_setAutoTuning(bool b) {
     MPWideAutoTune = 0;
   }
 }
-
-/* Enable (define)/Disable(don't define) Performance Timing Measurements */
-#define PERF_TIMING
-/* Performance report verbosity: 1 reports speeds on send/recv. 2 reports on initialization details.
-   3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g. 
-   reports for accumulated bytes after every chunk is received. */
-#define PERF_REPORT 2
-
-#define LVL_ERR 0
-#define LVL_WARN 2
-#define LVL_INFO 4
-#define LVL_DEBUG 6
-#define MONITORING 1
-
-#define LOG_LVL LVL_INFO
-
-#if LOG_LVL >= LVL_ERR
-  #define LOG_ERR(MSG) cout << MSG << endl;
-#else
-  #define LOG_ERR(MSG)
-#endif
-#if LOG_LVL >= LVL_WARN
-  #define LOG_WARN(MSG) cout << MSG << endl;
-#else
-  #define LOG_WARN(MSG)
-#endif
-#if LOG_LVL >= LVL_INFO
-  #define LOG_INFO(MSG) cout << MSG << endl;
-#else
-  #define LOG_INFO(MSG)
-#endif
-#if LOG_LVL >= LVL_DEBUG
-  #define LOG_DEBUG(MSG) cout << MSG << endl;
-#else
-  #define LOG_DEBUG(MSG)
-#endif
-
-#define max(X,Y) ((X) > (Y) ? (X) : (Y))
-#define min(X,Y) ((X) < (Y) ? (X) : (Y))
-#define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
 
 using namespace std;
 
@@ -207,11 +168,11 @@ char *MPW_DNSResolve(char *host){
   }
   if(host_info) {
     const in_addr* address = (in_addr*)host_info->h_addr_list[0] ;
-    LOG_DEBUG(" address found: " << inet_ntoa( *address ))
+    LOG_DEBUG(" address found: " << inet_ntoa( *address ));
     host = (char*) (inet_ntoa(*address));
     return host;
   }
-  LOG_ERR("Error: Unable to resolve host name")
+  LOG_ERR("Error: Unable to resolve host name");
   return NULL;
 }
 
@@ -1066,7 +1027,7 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 void MPW_splitBuf(char* buf, long long int bsize, int num_chunks, char** split_buf, long long int* chunk_sizes) {
 
   if(num_chunks < 1) { 
-    LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.")
+    LOG_ERR("ERROR: MPW_splitBuf is about to split into 0 chunks.");
     exit(0);
   }
   size_t bsize_each = size_t(bsize / num_chunks);

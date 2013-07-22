@@ -19,8 +19,6 @@
  * along with MPWide.  If not, see <http://www.gnu.org/licenses/>.
  * **************************************************************/
 
-#define REPORT_BUFFERSIZES 0
-
 #include "Socket.h"
 #include "string.h"
 #include <string.h>
@@ -30,8 +28,7 @@
 #include <cstdlib>
 #include <stdio.h>
 
-#define max(X,Y) ((X) > (Y) ? (X) : (Y))
-#define FLAG_CHECK(X, Y) (((X)&(Y)) == (Y))
+#include "mpwide-macros.h"
 
 using namespace std;
 
@@ -62,13 +59,13 @@ bool Socket::create()
   m_sock = socket ( AF_INET, SOCK_STREAM, 0);
 
   if ( ! is_valid() ) {
-    cout << "Failed to create socket." << endl;
+    LOG_ERR("Failed to create socket.");
     return false;
   }
 
   int on = 1;
   if ( setsockopt ( m_sock, SOL_SOCKET, SO_REUSEADDR, ( const char* ) &on, sizeof ( on ) ) == -1 ) {
-    cout << "Failed to set socket option." << endl;
+    LOG_ERR("Failed to set socket option.");
     return false;
   }
 
@@ -99,7 +96,7 @@ bool Socket::bind ( const int port )
 {
   if ( ! is_valid() )
     {
-      cout << "bind: Invalide socket. " << endl;
+      LOG_ERR("bind: Invalid socket. ");
       return false;
     }
   m_addr.sin_family = AF_INET;
@@ -108,7 +105,7 @@ bool Socket::bind ( const int port )
   int bind_return = ::bind(m_sock, (struct sockaddr *) &m_addr, sizeof (m_addr));
   if ( bind_return == -1 )
     {
-      cout << "bind: Failed to bind." << endl;
+      LOG_ERR("bind: Failed to bind.");
       return false;
     }
   return true;
@@ -119,13 +116,13 @@ bool Socket::listen() const
 {
   if ( ! is_valid() )
     {
-      cout << "listen: Invalid socket." << endl;
+      LOG_ERR("listen: Invalid socket.");
       return false;
     }
   int listen_return = ::listen ( m_sock, MAXCONNECTIONS );
   if ( listen_return == -1 )
   {
-    cout << "listen failed: " << string(strerror(errno)) << "/" << errno << endl;
+    LOG_ERR("listen failed: " << string(strerror(errno)) << "/" << errno);
     return false;
   }
 
@@ -150,7 +147,7 @@ bool Socket::accept()
   m_sock = new_m_sock;
   
   if ( m_sock <= 0 ) {
-    cout << "accept failed: " << string(strerror(errno)) << "/" << errno << endl;
+    LOG_ERR("accept failed: " << string(strerror(errno)) << "/" << errno);
     return false;
   }
   else {
@@ -176,7 +173,7 @@ bool Socket::send ( const char* s, long long int size ) const
       count = 0;
       ssize_t status = ::send(m_sock, s+bytes_sent, sendsize-bytes_sent, tcp_send_flag);
       if ( status == -1 ) {
-        cerr << "Socket.send error. Details: " << errno << "/"<< strerror(errno) << endl;
+        LOG_ERR("Socket.send error. Details: " << errno << "/" << strerror(errno));
         return false;
       }
       bytes_sent += status;
@@ -187,9 +184,12 @@ bool Socket::send ( const char* s, long long int size ) const
       cout << "s";
       #endif
       if(ok<0) {
-        fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
-        fflush(stderr);
-        exit(-9);
+        LOG_ERR("Socket error: " << ok << ", " << strerror(errno));
+        #if EXIT_ON_SENDRECV_ERROR == 1
+        exit(1);
+        #else
+        return false;
+        #endif
         }
       }
       if(++count > 5) {
@@ -227,14 +227,18 @@ int Socket::recv ( char* s, long long int size ) const
     }
     else {
       if(ok < 0) {
-        fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
-        return -1;
+        LOG_ERR("Socket error: " << ok << ", " << strerror(errno));
+        #if EXIT_ON_SENDRECV_ERROR == 1
+          exit(1);
+        #else
+          return -1;
+        #endif
       } else {
         usleep(50000);
         cout << "r";
         if(++count == 1) {
-          cerr << "Recv timeout: " << errno << " / " << strerror(errno) << endl;
-          cerr << "We will keep trying to receive for a while..." << endl;
+          LOG_ERR("Recv timeout: " << errno << " / " << strerror(errno));
+          LOG_ERR("We will keep trying to receive for a while...");
         }
         else if (count == 100) { /* Too many problems to get a socket. Let's just consider this receive to have failed. */
           return -1;
@@ -249,22 +253,34 @@ int Socket::recv ( char* s, long long int size ) const
 int Socket::irecv ( char* s, long long int size ) const
 {
   int status = ::recv ( m_sock, s, size, 0 );
-  if ( status < 0 ) {
-    cout << "irecv: status = " << status << " errno = " << errno << "/" << strerror(errno) << endl;
-    return 0;
-    exit(-1);
-  }
+  #if LOG_LVL >= LVL_ERR || EXIT_ON_SENDRECV_ERROR == 1
+    if ( status <= 0 ) {
+      #if LOG_LVL >= LVL_ERR
+        if (status == 0) {
+          cout << "irecv: connection reset by peer.status = " << status << " errno = " << errno << "/" << strerror(errno) << endl;
+        } else {
+          cout << "irecv: status = " << status << " errno = " << errno << "/" << strerror(errno) << endl;
+        }
+      #endif
+      #if EXIT_ON_SENDRECV_ERROR == 1
+        exit(1);
+      #endif
+    }
+  #endif
   return status;
 }
 
 int Socket::isend ( const char* s, long long int size ) const
 {
   int status = ::send ( m_sock, s, size, tcp_send_flag );
-  if ( status < 0 ) {
-    cerr << "isend: status = " << status << " errno = " << errno << "/"<< strerror(errno) << endl;
-    exit(-1);
-    return 0;
-  }
+  #if LOG_LVL >= LVL_ERR || EXIT_ON_SENDRECV_ERROR == 1
+    if ( status < 0 ) {
+      LOG_ERR("isend: status = " << status << " errno = " << errno << "/"<< strerror(errno));
+      #if EXIT_ON_SENDRECV_ERROR == 1
+        exit(1);
+      #endif
+    }
+  #endif
   return status;
 }
 
@@ -304,7 +320,7 @@ bool Socket::connect ( const string host, const int port )
   int status = inet_pton ( AF_INET, host.c_str(), &m_addr.sin_addr );
 
   if ( status < 1 ) {
-    #if REPORT_BUFFERSIZES > 0
+    #if REPORT_ERRORS > 0
       cerr << "Could not convert address'" << host << "': " << string(strerror(errno)) << "/" << errno << endl;
     #endif
     return false;
@@ -313,9 +329,7 @@ bool Socket::connect ( const string host, const int port )
   socklen_t sz = sizeof(m_addr);
   status = ::connect(m_sock, (struct sockaddr *) &m_addr, sz);
   if(status == -1) {
-      #if REPORT_BUFFERSIZES > 0
-        cerr << "Could not connect to port: " << string(strerror(errno)) << "/" << errno << endl;
-      #endif
+      LOG_ERR("Could not connect to port: " << string(strerror(errno)) << "/" << errno);
       return false;
   }
 
@@ -336,15 +350,11 @@ bool Socket::connect ( const string host, const int port )
   getsockopt(m_sock, SOL_SOCKET, SO_ERROR, (char*) &error_buf, &err_len);
 
   if(write>0 && error_buf<1) {
-    #if REPORT_BUFFERSIZES > 0
-    cout << "socket is connected! " << error_buf << endl;
-    #endif
+    LOG_ERR("socket is connected! " << error_buf);
     return true;
   }
   else {
-    #if REPORT_BUFFERSIZES > 0
-    cout << "socket is NOT connected! " << error_buf << endl;
-    #endif
+    LOG_ERR("socket is NOT connected! " << error_buf);
     return false;
   }
 }
@@ -404,7 +414,7 @@ int Socket_select(int rs, int ws, int mask, int timeout_s, int timeout_u)
 	} else if (ok == 0)	{
 		return 0;
 	} else {
-		printf("select_me: %s/%d Msg: ", strerror(errno), errno);
+    LOG_ERR("select_me: " << strerror(errno) << "/" << errno);
 		return -1;
 	}
 }

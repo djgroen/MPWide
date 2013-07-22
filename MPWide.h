@@ -24,9 +24,6 @@ using namespace std;
 
 /* Enable/disable software-based packet pacing. */
 #define PacingMode 1
-#define OptimizeStreamCount 1
-/* TimeOut in milliseconds. 0 means no timeout */
-#define InitStreamTimeOut 0
 
 char* MPW_DNSResolve(char* host);
 
