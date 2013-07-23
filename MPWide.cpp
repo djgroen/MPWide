@@ -168,8 +168,8 @@ char *MPW_DNSResolve(char *host){
   }
   if(host_info) {
     const in_addr* address = (in_addr*)host_info->h_addr_list[0] ;
-    LOG_DEBUG(" address found: " << inet_ntoa( *address ));
     host = (char*) (inet_ntoa(*address));
+    LOG_DEBUG(" address found: " << host);
     return host;
   }
   LOG_ERR("Error: Unable to resolve host name");
@@ -177,12 +177,7 @@ char *MPW_DNSResolve(char *host){
 }
 
 char *MPW_DNSResolve(string host) {
-  // TODO: Memory leak
-  // replace with: return MPW_DNSResolve((char *)host.c_str());
-  char * l_host = new char[host.size() + 1];
-  std::copy(host.begin(), host.end(), l_host);
-  l_host[host.size()] = '\0';
-  return MPW_DNSResolve(l_host);
+  return MPW_DNSResolve((char *)host.c_str());
 }
 
 inline int selectSockets(int wchannel, int rchannel, int mask)
@@ -483,9 +478,7 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
   paths.push_back(MPWPath(host, stream_indices, streams_in_path));
   int path_id = paths.size()-1;
   MPW_AddStreams(hosts, path_ports, path_cports, streams_in_path);
-
-  // TODO: this was commented, can we uncomment it to prevent a memory leak?
-  //delete [] hosts;
+  delete [] hosts;
 
   #if PERF_REPORT > 0
   cout << "Creating New Path:" << endl;
