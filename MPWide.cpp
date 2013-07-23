@@ -652,9 +652,9 @@ void MPW_Recv(char* buf, long long int size, int* channels, int num_channels)
 }
 
 /* Send/Recv between two processes. */
-int *InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel)
+int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* const recvbuf, const long long int recvsize, const int base_channel)
 {
-  int *ret = new int(0);
+  int * const ret = new int(0);
 
 #ifdef PERF_TIMING
   double t = GetTime();
@@ -674,13 +674,22 @@ int *InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
   while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
     const int mode = selectSockets(channel,channel2,mask);
 
+    if (mode == -1) {
+      // Continue after interrupt, but fail on other messages
+      if (errno == EINTR)
+        continue;
+      else {
+        *ret = -max(1, errno);
+        break;
+      }
+    }
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_RDMASK)) {
-      int n = client[channel2].irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
+      const int n = client[channel2].irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
       if (n <= 0) {
         if (n == 0)
           *ret = -1;
         else
-          *ret = -errno;
+          *ret = -max(1, errno);
         break;
       }
       b += n;
@@ -693,7 +702,7 @@ int *InThreadSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long
     }
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_WRMASK)) {
-      int n = client[channel].isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
+      const int n = client[channel].isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
 
       if (n < 0) {
         *ret = -errno;
@@ -973,6 +982,20 @@ void *MPW_TSendRecv(void *args)
   return InThreadSendRecv(t->sendbuf, t->sendsize, t->recvbuf, t->recvsize, t->channel);
 }
 
+/* Better version of TSendRecv */
+void *MPW_TSend(void *args)
+{
+  thread_tmp *t = (thread_tmp *)args;
+  return InThreadSendRecv(t->sendbuf, t->sendsize, (char *)0, 0, t->channel);
+}
+
+/* Better version of TSendRecv */
+void *MPW_TRecv(void *args)
+{
+  thread_tmp *t = (thread_tmp *)args;
+  return InThreadSendRecv((char *)0, 0, t->recvbuf, t->recvsize, t->channel);
+}
+
 /* DSendRecv: MPWide Low-level dynamic exchange. 
  * In this exchange, the message size is automatically appended to the data. 
  * The size is first read by the receiving process, which then reads in the
@@ -1245,20 +1268,36 @@ int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long 
   //cout << sendbuf[0] << " / " << recvbuf[0] << " / " << num_channels << " / " << sendsize[0] << " / " << recvsize[0] << " / " << channel[0] << endl;
   pthread_t streams[num_channels];
 
+  void *(*sendrecvFunc)(void *);
+  
   for(int i=0; i<num_channels; i++){
-    ta[i].sendsize = sendsize[i];
-    ta[i].recvsize = recvsize[i];
-    ta[i].channel = channel[i];
-    ta[i].sendbuf = sendbuf[i];
-    ta[i].recvbuf = recvbuf[i];
+    const int stream = channel[i];
 
+    ta[stream].channel = stream;
+
+    if (recvsize[i]) {
+      ta[stream].recvbuf = recvbuf[i];
+      ta[stream].recvsize = recvsize[i];
+    }
+    if (sendsize[i]) {
+      ta[stream].sendsize = sendsize[i];
+      ta[stream].sendbuf = sendbuf[i];
+    }
+    
+    if (sendsize[i] && recvsize[i])
+      sendrecvFunc = &MPW_TSendRecv;
+    else if (sendsize[i])
+      sendrecvFunc = &MPW_TSend;
+    else
+      sendrecvFunc = &MPW_TRecv;
+    
     if(i>0) {
-      int code = pthread_create(&streams[i], NULL, MPW_TSendRecv, &ta[i]);
+      int code = pthread_create(&streams[i], NULL, sendrecvFunc, &ta[stream]);
     }
   }
   
   int return_value = 0;
-  int *res = (int *)MPW_TSendRecv(&ta[0]);
+  int *res = (int *)sendrecvFunc(&ta[channel[0]]);
   if (*res < 0)
     return_value = *res;
   delete res;
