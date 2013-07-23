@@ -24,9 +24,6 @@ using namespace std;
 
 /* Enable/disable software-based packet pacing. */
 #define PacingMode 1
-#define OptimizeStreamCount 1
-/* TimeOut in milliseconds. 0 means no timeout */
-#define InitStreamTimeOut 0
 
 char* MPW_DNSResolve(char* host);
 
@@ -46,9 +43,9 @@ int MPW_CreatePath(string host, int server_side_base_port, int num_streams);
 // Return 0 on success (negative on failure).
 int MPW_DestroyPath(int path);
 
-void MPW_Send(char* sendbuf, long long int sendsize, int path);
-void MPW_Recv(char* recvbuf, long long int recvsize, int path);
-void MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path);
+int MPW_Send(char* sendbuf, long long int sendsize, int path);
+int MPW_Recv(char* recvbuf, long long int recvsize, int path);
+int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path);
 // returns the size of the newly received data. 
 int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize, int path);
 
@@ -72,8 +69,8 @@ void MPW_ReOpenChannels(int* channels, int num_channels);
 int MPW_Finalize();
 
 /* Perform this using multiple channels. */
-void MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels);
-void MPW_SendRecv ( char* sendbuf, long long int  sendsize, char*  recvbuf, long long int  recvsize, int* channel, int num_channels);
+int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels);
+int MPW_SendRecv ( char* sendbuf, long long int  sendsize, char*  recvbuf, long long int  recvsize, int* channel, int num_channels);
 
 /* Dynamically-sized message exchanges. */
 long long int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize, int* channel, int num_channels);
