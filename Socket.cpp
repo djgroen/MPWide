@@ -408,7 +408,7 @@ int Socket_select(int rs, int ws, int mask, int timeout_s, int timeout_u)
 	if(ok > 0) {
 		return (rsock && FD_ISSET(rs,rsock) ? MPWIDE_SOCKET_RDMASK : 0)
 		| (wsock && FD_ISSET(ws,wsock) ? MPWIDE_SOCKET_WRMASK : 0);
-	} else if (ok == 0)	{
+	} else if (ok == 0 || errno == EINTR) { // Interruptions don't matter
 		return 0;
 	} else {
     LOG_ERR("select_me: " << strerror(errno) << "/" << errno);
