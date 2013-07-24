@@ -347,7 +347,7 @@ bool Socket::connect ( const string host, const int port )
   getsockopt(m_sock, SOL_SOCKET, SO_ERROR, (char*) &error_buf, &err_len);
 
   if(write>0 && error_buf<1) {
-    LOG_ERR("socket is connected! " << error_buf);
+    LOG_INFO("socket is connected! " << error_buf);
     return true;
   }
   else {
