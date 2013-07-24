@@ -576,6 +576,7 @@ int MPW_DestroyPath(int path) {
   DecrementStreamIndices(i, len);
 
   delete paths[path];
+  paths[path] = 0;
   
   return 0;
 }
@@ -640,8 +641,11 @@ int MPW_Finalize()
 #if MONITORING == 1
   stop_monitor = true;
 #endif
-  for(int i=0; i<num_streams; i++) {
-    client[i]->close();
+  for (vector<Socket *>::iterator it = client.begin(); it != client.end(); ++it) {
+    delete *it;
+  }
+  for (vector<MPWPath *>::iterator it = paths.begin(); it != paths.end(); ++it) {
+    if (*it) delete *it;
   }
   #if PERFREPORT > 0
   cout << "MPWide sockets are closed." << endl;
