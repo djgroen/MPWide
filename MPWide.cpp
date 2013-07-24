@@ -108,7 +108,7 @@ static void autotunePacingRate()
   int max_streams = 0;
   for(unsigned int i=0; i<paths.size(); i++)
   {
-    if (paths[i]->num_streams > max_streams)
+    if (paths[i] && paths[i]->num_streams > max_streams)
       max_streams = paths[i]->num_streams;
   }
   
