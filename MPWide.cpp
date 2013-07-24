@@ -490,7 +490,7 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
   cout << host << " " <<  server_side_base_port << " " << streams_in_path << " streams."  << endl;
     #if PERF_REPORT > 1
     for(int i=0; i<streams_in_path; i++) {
-      cout << "Stream[" << i << "]: " << paths[paths.size()-1].streams[i] << endl;
+      cout << "Stream[" << i << "]: " << paths[paths.size()-1]->streams[i] << endl;
     } 
     #endif
   #endif
