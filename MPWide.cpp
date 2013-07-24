@@ -108,7 +108,39 @@ static int relay_rsize = 8*1024;
       LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.");
     }
   }
+
+static void autotunePacingRate()
+{
+  int max_streams = 0;
+  for(unsigned int i=0; i<paths.size(); i++)
+  {
+    if (paths[i].num_streams > max_streams)
+      max_streams = paths[i].num_streams;
+  }
+  
+  if (max_streams < 3)
+    MPW_setPacingRate(1200*1024*1024);
+  else
+    MPW_setPacingRate((1200*1024*1024)/max_streams);
+}
 #endif
+static void showSettings()
+{
+  LOG_INFO("-----------------------------------------------------------");
+  LOG_INFO("MPWide Settings:");
+  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize);
+  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize);
+  LOG_INFO("Number of streams       : " << num_streams);
+  LOG_INFO("tcp buffer parameter    : " << WINSIZE);
+  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.");
+#ifdef MONITORING
+  LOG_INFO("bandwidth monitoring    : " << MONITORING);
+#else
+  LOG_INFO("bandwidth monitoring    : 0")
+#endif
+  LOG_INFO("-----------------------------------------------------------");
+  LOG_INFO("END OF SETUP PHASE.");
+}
 
 typedef struct thread_tmp {
   long long int sendsize, recvsize;
@@ -357,6 +389,27 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
       cout << url[i] << " " << ports[i] << " " << cports[i] << endl;
     #endif
   }
+  
+#if PacingMode == 1
+  if(MPWideAutoTune == 1) {
+    autotunePacingRate();
+  }
+#endif
+  
+  if (MPW_INITIALISED == false) {
+    MPW_INITIALISED = true;
+#ifdef PERF_TIMING
+#if MONITORING == 1
+    pthread_t monitor;
+    int code = pthread_create(&monitor, NULL, MPW_TBandwidth_Monitor, NULL);
+#endif
+#endif
+    /* Allocate global thread memory */
+    ta = (thread_tmp *) MPWmalloc( sizeof(thread_tmp) * num_streams);
+  }
+  else {
+    ta = (thread_tmp *) realloc(ta, sizeof(thread_tmp) * num_streams);
+  }
 }
 
 int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
@@ -380,7 +433,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   for(int i = 1; i < numstreams; i++) {
     pthread_join(streams[i], NULL);
   }
-
+  
   /* Error handling code (in case MPW_InitStream times out for one or more */
   bool all_connected = true;
   for(int i = 0; i < numstreams; i++) {
@@ -396,50 +449,6 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
       }
     }
     return -1;
-  }
-
-  if(MPWideAutoTune == 1) {
-    for(unsigned int i=0; i<paths.size(); i++) {
-      if(paths[i].num_streams < 3) {
-        MPW_setPacingRate(1200*1024*1024);
-      }
-      else {
-        MPW_setPacingRate((1200*1024*1024)/paths[i].num_streams);
-      }
-      for(int j=0; j<paths[i].num_streams; j++) {
-        MPW_setWin(paths[i].streams[j] , 32*1024*1024/paths[i].num_streams);
-      }
-    }
-  }
-
-  LOG_INFO("-----------------------------------------------------------");
-  LOG_INFO("MPWide Settings:");
-  LOG_INFO("Chunk Size   (send/recv): " << tcpbuf_ssize << "/" << tcpbuf_rsize);
-  LOG_INFO("Relay pace   (send/recv): " << relay_ssize << "/" << relay_rsize);
-  LOG_INFO("Number of streams       : " << num_streams);
-  LOG_INFO("tcp buffer parameter    : " << WINSIZE);
-  LOG_INFO("pacing rate             : " << pacing_rate << " bytes/s.");
-#ifdef MONITORING
-  LOG_INFO("bandwidth monitoring    : " << MONITORING);
-#else
-  LOG_INFO("bandwidth monitoring    : 0")
-#endif
-  LOG_INFO("-----------------------------------------------------------");
-  LOG_INFO("END OF SETUP PHASE.");
-
-  if (MPW_INITIALISED == false) {
-    MPW_INITIALISED = true;
-    #ifdef PERF_TIMING
-    #if MONITORING == 1
-    pthread_t monitor;
-    int code = pthread_create(&monitor, NULL, MPW_TBandwidth_Monitor, NULL);
-    #endif
-    #endif
-    /* Allocate global thread memory */
-    ta = (thread_tmp *) MPWmalloc( sizeof(thread_tmp) * num_streams);
-  }
-  else {
-    ta = (thread_tmp *) realloc(ta, sizeof(thread_tmp) * num_streams);
   }
   return 0;
 }
@@ -457,7 +466,9 @@ int MPW_Init(string* url, int* ports, int* cports, int numstreams)
   }
 
   MPW_AddStreams(url, ports, cports, numstreams);
-  return MPW_InitStreams(stream_indices, numstreams, true);
+  int ret = MPW_InitStreams(stream_indices, numstreams, true);
+  showSettings();
+  return ret;
 }
 
 /* Constructs a path. Return path id or negative error value. */
@@ -495,7 +506,17 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
 }
 
 int MPW_ConnectPath(int path_id, bool server_wait) {
-  return MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams, server_wait);
+  int ret = MPW_InitStreams(paths[path_id].streams, paths[path_id].num_streams, server_wait);
+  
+  if (MPWideAutoTune == 1 && ret >= 0)
+  {
+    const int default_window = 32*1024*1024/paths[path_id].num_streams;
+    for(int j=0; j<paths[path_id].num_streams; j++)
+      MPW_setWin(paths[path_id].streams[j], default_window);
+  }
+  showSettings();
+
+  return ret;
 }
 
 /* Creates and connects a path */
@@ -545,6 +566,7 @@ int MPW_DestroyPath(int path) {
   const int len = paths[path].num_streams;
   const int i = paths[path].streams[0];
   const int end = i + len;
+  
   MPW_CloseChannels(paths[path].streams, len);
   port.erase(port.begin()+i, port.begin()+end);
   cport.erase(cport.begin()+i, cport.begin()+end);
@@ -555,7 +577,11 @@ int MPW_DestroyPath(int path) {
 
   DecrementStreamIndices(i, len);
 
-  paths.erase(paths.begin()+path);
+  // NOTE: We can't erase the path: that would invalidate all path id's
+  // that were given out after the destroyed path id.
+  //
+  //  paths.erase(paths.begin()+path);
+  
   return 0;
 }
 
