@@ -35,7 +35,6 @@ using namespace std;
 #include "MPWide.h"
 
 pthread_mutex_t log_mutex;
-pthread_mutex_t create_mutex;
 pthread_mutex_t accept_destroy_mutex;
 pthread_rwlock_t use_rwmutex;
 stack<int> destroypaths;
@@ -65,9 +64,7 @@ void add_destroypath(int path_id)
 int do_connect(string host, int port, int num_channels, bool asServer)
 {
   pthread_rwlock_wrlock(&use_rwmutex);
-  pthread_mutex_lock(&create_mutex);
   int path_id = MPW_CreatePathWithoutConnect(host, port, num_channels); ///path version
-  pthread_mutex_unlock(&create_mutex);
   pthread_rwlock_unlock(&use_rwmutex);
 
   if (path_id >= 0) {
@@ -210,7 +207,6 @@ void *destroy_thread(void *)
 }
 
 int main(int argc, char** argv){
-  pthread_mutex_init(&create_mutex, NULL);
   pthread_mutex_init(&destroy_mutex, NULL);
   pthread_mutex_init(&accept_destroy_mutex, NULL);
   pthread_cond_init(&destroy_cond, NULL);
@@ -282,7 +278,6 @@ int main(int argc, char** argv){
   pthread_join(destroy_t, NULL);
 
   pthread_mutex_destroy(&log_mutex);
-  pthread_mutex_destroy(&create_mutex);
   pthread_mutex_destroy(&destroy_mutex);
   pthread_rwlock_destroy(&use_rwmutex);
   pthread_cond_destroy(&destroy_cond);
