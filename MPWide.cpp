@@ -429,6 +429,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   }
   
   /* Error handling code (in case MPW_InitStream times out for one or more */
+  // closing itself is done by caller
   bool all_connected = true;
   for(int i = 0; i < numstreams; i++) {
     if(t[i].connected == false) {
@@ -436,15 +437,10 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
       all_connected = false;
     }
   }
-  if(!all_connected) {
-    for(int i = 0; i < numstreams; i++) {
-      if(t[i].connected == true) {
-        client[stream_indices[i]]->close();
-      }
-    }
+  if (all_connected)
+    return 0;
+  else
     return -1;
-  }
-  return 0;
 }
 
 /* Initialize the MPWide. set client to 1 for one machine, and to 0 for the other. */
@@ -469,7 +465,7 @@ int MPW_Init(string* url, int* ports, int* cports, int numstreams)
 int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int streams_in_path) {
   int path_ports[streams_in_path];
   int path_cports[streams_in_path];
-  // TODO: memory leak?
+
   string *hosts = new string[streams_in_path];
   int stream_indices[streams_in_path];
   for(int i=0; i<streams_in_path; i++) {
@@ -527,6 +523,8 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
 
 void DecrementStreamIndices(int q, int len) {
   for(unsigned int i=0; i<paths.size(); i++) {
+    if (!paths[i])
+      continue;
     for(int j=0; j<paths[i]->num_streams; j++) {
       if(paths[i]->streams[j] > q) { 
         paths[i]->streams[j] -= len;
