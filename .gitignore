@@ -8,5 +8,6 @@
 /MPWForwarder
 /MPWTest
 /MPWTestRestart
+/MPWTestConcurrent
 /libMPW.*
 bandwidth_monitor.txt

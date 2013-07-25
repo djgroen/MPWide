@@ -41,7 +41,6 @@ class Socket
 {
  public:
   Socket();
-  Socket(const Socket& sock);
   virtual ~Socket();
 
   // Server initialization
