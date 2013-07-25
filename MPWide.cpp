@@ -253,6 +253,7 @@ void *MPW_TBandwidth_Monitor(void *args)
 
 typedef struct init_tmp {
   int stream;
+  Socket *sock;
   int port;
   int cport;
   bool server_wait;
@@ -264,23 +265,24 @@ void* MPW_InitStream(void* args)
   init_tmp t = *((init_tmp *) args);
   init_tmp *pt = ((init_tmp *) args);
 
+  Socket *sock = t.sock;
   int stream = t.stream;
   int port = t.port;
   int cport = t.cport;
   bool server_wait = t.server_wait;
 
   if(isclient[stream]) {
-    client[stream]->create();
+    sock->create();
     /* Patch to bypass firewall problems. */
     if(cport>0) {
       #if PERF_REPORT > 1
         cout << "[" << stream << "] Trying to bind as client at " << (cport) << endl;
       #endif
-      int bound = client[stream]->bind(cport);
+      int bound = sock->bind(cport);
     }
 
     /* End of patch*/
-    pt->connected = client[stream]->connect(remote_url[stream],port);
+    pt->connected = sock->connect(remote_url[stream],port);
     LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
 
     #if InitStreamTimeOut == 0
@@ -298,23 +300,23 @@ void* MPW_InitStream(void* args)
   }
  
   if(!pt->connected) {
-    client[stream]->close();
+    sock->close();
     if (server_wait) {
-      client[stream]->create();
+      sock->create();
 
-      bool bound = client[stream]->bind(port);
+      bool bound = sock->bind(port);
       #if PERF_REPORT > 1
-        cout << "[" << stream << "] Trying to bind as server at " << (port) << ". Result = " << bound << endl;
+        cout << "[" << stream << "] Trying to bind as server at " << port << ". Result = " << bound << endl;
       #endif
       
       if (!bound) {
         LOG_WARN("Bind on ch #"<< stream <<" failed.");
-        client[stream]->close();
+        sock->close();
         return NULL;
       }
 
-      if (client[stream]->listen()) {
-          pt->connected = client[stream]->accept();
+      if (sock->listen()) {
+          pt->connected = sock->accept();
           #if PERF_REPORT > 1
           cout <<  "[" << stream << "] Attempt to act as server: " << pt->connected << endl;
           #endif
@@ -322,7 +324,7 @@ void* MPW_InitStream(void* args)
       }
       else {
         LOG_WARN("Listen on ch #"<< stream <<" failed.");
-        client[stream]->close();
+        sock->close();
         return NULL;
       }
     }
@@ -349,6 +351,7 @@ void MPW_ReOpenChannels(int* channel, int numchannels)
   for(int i = 0; i < numchannels; i++) {
     int stream = channel[i];
     t[i].stream    = stream;
+    t[i].sock = client[stream];
     t[i].port = port[stream];
     t[i].cport = cport[stream];
     LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream]);
@@ -413,6 +416,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
   for(int i = 0; i < numstreams; i++) {
     int stream = stream_indices[i];
     t[i].stream     = stream;
+    t[i].sock  = client[stream];
     t[i].port  = port[stream];
     t[i].cport = cport[stream];
     t[i].server_wait = server_wait;
@@ -678,17 +682,15 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
 
   long long int a = 0;
   long long int b = 0;
-
-  const int channel = base_channel % 65536;
-  const int channel2 = base_channel < 65536
-                     ? channel
-                     : (base_channel/65536) - 1;
+  
+  const Socket *wsock = client[base_channel % 65536];
+  const Socket *rsock = base_channel < 65536 ? wsock : client[(base_channel/65536) - 1];
 
   int mask = (recvsize == 0 ? MPWIDE_SOCKET_RDMASK : 0)
            | (sendsize == 0 ? MPWIDE_SOCKET_WRMASK : 0);
   
   while (mask != (MPWIDE_SOCKET_RDMASK|MPWIDE_SOCKET_WRMASK)) {
-    const int mode = selectSockets(channel,channel2,mask);
+    const int mode = Socket_select(rsock->getSock(), wsock->getSock(), mask, 10, 0);
 
     if (mode == -1) {
       // Continue after interrupt, but fail on other messages
@@ -700,9 +702,9 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
       }
     }
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_RDMASK)) {
-      const int n = client[channel2]->irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
+      const int n = rsock->irecv(recvbuf + b, min(tcpbuf_rsize,recvsize - b));
       if (n <= 0) {
-        if (n == 0)
+        if (n == 0) // socket disconnected on other side, choose default -1 errno.
           *ret = -1;
         else
           *ret = -max(1, errno);
@@ -718,7 +720,7 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
     }
 
     if(FLAG_CHECK(mode,MPWIDE_SOCKET_WRMASK)) {
-      const int n = client[channel]->isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
+      const int n = wsock->isend(sendbuf + a, min(tcpbuf_ssize, sendsize - a));
 
       if (n < 0) {
         *ret = -errno;
