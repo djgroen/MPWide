@@ -43,20 +43,13 @@ Socket::Socket() :
 {
   memset(&m_addr, 0, sizeof( m_addr ));
   set_non_blocking(false);
-  refs = new int(1);
-}
-
-Socket::Socket(const Socket& other) : m_sock(other.m_sock), m_addr(other.m_addr), refs(other.refs)
-{
-  ++(*refs);
 }
 
 Socket::~Socket()
 {
-  if (--(*refs) == 0) {
-    if ( is_valid() )
-      ::close ( m_sock );
-    delete refs;
+  if (is_valid()) {
+    shutdown(m_sock,SHUT_RDWR);
+    ::close(m_sock);
   }
 }
 
@@ -91,8 +84,11 @@ void Socket::setWin(int size)
 
 void Socket::close()
 {
-  shutdown(m_sock,SHUT_RDWR);
-  ::close(m_sock);
+  if (is_valid()) {
+    shutdown(m_sock,SHUT_RDWR);
+    ::close(m_sock);
+    m_sock = -1;
+  }
 }
 
 bool Socket::bind ( const int port )
@@ -378,7 +374,7 @@ bool Socket::connect ( const string host, const int port )
   getsockopt(m_sock, SOL_SOCKET, SO_ERROR, (char*) &error_buf, &err_len);
 
   if(write>0 && error_buf<1) {
-    LOG_ERR("socket is connected! " << error_buf);
+    LOG_INFO("socket is connected! " << error_buf);
     return true;
   }
   else {
