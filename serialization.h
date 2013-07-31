@@ -21,10 +21,10 @@ serialize_size_t(unsigned char *net_number, const size_t native_number)
 {   
     if (sizeof(size_t) >= 8)
     {
-        net_number[0] = native_number >> 56;
-        net_number[1] = native_number >> 48;
-        net_number[2] = native_number >> 40;
-        net_number[3] = native_number >> 32;
+        net_number[0] = (native_number >> 56) & 0xff;
+        net_number[1] = (native_number >> 48) & 0xff;
+        net_number[2] = (native_number >> 40) & 0xff;
+        net_number[3] = (native_number >> 32) & 0xff;
     }
     else
     {
@@ -32,10 +32,10 @@ serialize_size_t(unsigned char *net_number, const size_t native_number)
         // First bytes are not defined -- 0
         memset(net_number, 0, 4);
     }
-    net_number[4] = native_number >> 24;
-    net_number[5] = native_number >> 16;
-    net_number[6] = native_number >>  8;
-    net_number[7] = native_number;
+    net_number[4] = (native_number >> 24) & 0xff;
+    net_number[5] = (native_number >> 16) & 0xff;
+    net_number[6] = (native_number >>  8) & 0xff;
+    net_number[7] =  native_number        & 0xff;
 }
 
 inline size_t
