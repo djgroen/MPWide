@@ -52,7 +52,6 @@ static int num_streams = 0;
 
 // This is set to true on the first invocation of MPW_Init. MPW_EMPTY is given a 1-byte buffer.
 static bool MPW_INITIALISED = false;
-static char *MPW_EMPTY = new char[1];
 
 /* PATH-specific definitions */
 class MPWPath {
@@ -588,11 +587,11 @@ int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long
 }
 
 int MPW_Send(char* sendbuf, long long int sendsize, int path) {
-  return MPW_SendRecv(sendbuf, sendsize, MPW_EMPTY, 1, paths[path]->streams, paths[path]->num_streams);
+  return MPW_SendRecv(sendbuf, sendsize, NULL, 0, paths[path]->streams, paths[path]->num_streams);
 }
 
 int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
-  return MPW_SendRecv(MPW_EMPTY, 1, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
+  return MPW_SendRecv(NULL, 0, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
 }
 
 
@@ -648,7 +647,6 @@ int MPW_Finalize()
   cout << "MPWide sockets are closed." << endl;
   #endif
   free(ta); //clean global thread memory
-  delete [] MPW_EMPTY;
   sleep(1);
   return 1;
 }
@@ -658,12 +656,12 @@ int MPW_Finalize()
 /* Wrapping function for SendRecv in case no receiving is required. */
 void MPW_Send(char* sendbuf, long long int size, int* channels, int num_channels)
 {
-  MPW_SendRecv(sendbuf,size,MPW_EMPTY,1,channels,num_channels);
+  MPW_SendRecv(sendbuf,size,NULL,0,channels,num_channels);
 }
 
 void MPW_Recv(char* buf, long long int size, int* channels, int num_channels)
 {
-  MPW_SendRecv(MPW_EMPTY,1,buf,size,channels,num_channels);
+  MPW_SendRecv(NULL,0,buf,size,channels,num_channels);
 }
 
 /* Send/Recv between two processes. */
