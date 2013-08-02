@@ -125,7 +125,7 @@ struct init_tmp {
   static void autotunePacingRate()
   {
     int max_streams = 0;
-    for(unsigned int i = 0; i < num_paths; i++)
+    for(int i = 0; i < num_paths; i++)
     {
       if (paths[i] && paths[i]->num_streams > max_streams)
         max_streams = paths[i]->num_streams;
@@ -359,12 +359,6 @@ void MPW_AddStreams(string* url, int* ports, int* cports, const int *stream_indi
 
     LOG_DEBUG(url[i] << " " << ports[i] << " " << cports[i]);
   }
-  
-#if MPW_PacingMode == 1
-  if(MPWideAutoTune) {
-    autotunePacingRate();
-  }
-#endif
 }
 
 int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
@@ -489,6 +483,12 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, const i
   delete [] hosts;
 
   paths[path_id] = new MPWPath(host, stream_indices, streams_in_path);
+  
+#if MPW_PacingMode == 1
+  if(MPWideAutoTune) {
+    autotunePacingRate();
+  }
+#endif
   
   LOG_INFO("Creating New Path:");
   LOG_INFO(host << " " <<  server_side_base_port << " " << streams_in_path << " streams.");

@@ -97,6 +97,7 @@ void *connecting_thread(void *data)
     LOG("Succesfully connected to server");
     if (((vars *)data)->do_send) {
       char *buf = new char[msg_size];
+      memset(buf, 0, msg_size);
     
       int res;
       for (int i = 0; i < 20; i++) {
@@ -126,6 +127,7 @@ void *communicating_thread(void *data)
   bool do_send = ((vars *)data)->do_send;
   
   char *buf = new char[msg_size];
+  memset(buf, 0, msg_size);
   int res;
   
   for (int i = 0; i < 20; i++) {
