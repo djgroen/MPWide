@@ -1354,7 +1354,7 @@ int MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lon
 #endif
 
 #if OptimizeStreamCount == 1
-  nc = max(1, min(nc, max(sendsize, recvsize)/2048) ); // nc = total_size [kb] / 2.
+  nc = max(1, min(nc, max(sendsize, recvsize)/2760) ); // nc = bytes / 2*standard maximum segment size
 #endif
 
   size_t sendsize_each = size_t(sendsize / nc);
