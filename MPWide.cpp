@@ -140,7 +140,7 @@ typedef struct thread_tmp {
   int numrchannels; //Cycle only.
   char* sendbuf;
   char* recvbuf;
-}thread_tmp;
+} thread_tmp;
 
 /* global thread memory */
 static thread_tmp* ta;
@@ -148,16 +148,8 @@ static thread_tmp* ta;
 #ifdef PERF_TIMING
   double GetTime(){
     struct timeval tv;
-    gettimeofday( &tv, NULL);
-    double time;
-    time = (tv.tv_sec + (double)tv.tv_usec*1e-6);
-    return time;
-  }
-
-  void MPW_setChunkSize(int sending, int receiving) {
-    tcpbuf_ssize = sending;
-    tcpbuf_rsize = receiving;
-    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec + 1.0e-6*tv.tv_usec;
   }
 
   double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
@@ -165,6 +157,12 @@ static thread_tmp* ta;
   double PackingTime   = 0.0;
   double UnpackingTime = 0.0;
 #endif
+
+void MPW_setChunkSize(int sending, int receiving) {
+  tcpbuf_ssize = sending;
+  tcpbuf_rsize = receiving;
+  LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
+}
 
 /* malloc function, duplicated from the TreePM code. */
 void *MPWmalloc( const size_t size){
@@ -218,10 +216,8 @@ int MPW_NumChannels(){
 #if MONITORING == 1
 long long int bytes_sent;
 bool stop_monitor = false;
-#endif
 
 #ifdef PERF_TIMING
-#if MONITORING == 1
 /* Performs per-second bandwidth monitoring in real-time */
 void *MPW_TBandwidth_Monitor(void *args)
 {
@@ -243,8 +239,8 @@ void *MPW_TBandwidth_Monitor(void *args)
   myfile.close();
   return NULL;
 }
-#endif
-#endif
+#endif // ifdef PERF_TIMING
+#endif // MONITORING == 1
 
 typedef struct init_tmp {
   int stream;
@@ -270,9 +266,7 @@ void* MPW_InitStream(void* args)
     sock->create();
     /* Patch to bypass firewall problems. */
     if(cport>0) {
-      #if PERF_REPORT > 1
-        cout << "[" << stream << "] Trying to bind as client at " << (cport) << endl;
-      #endif
+      LOG_DEBUG("[" << stream << "] Trying to bind as client at " << (cport));
       int bound = sock->bind(cport);
     }
 
@@ -289,9 +283,8 @@ void* MPW_InitStream(void* args)
     }
     #endif
     
-    #if PERF_REPORT > 1
-      cout << "[" << stream << "] Attempt to connect as client to " << remote_url[stream] <<" at port " << port <<  ": " << pt->connected << endl;
-    #endif
+    LOG_DEBUG("[" << stream << "] Attempt to connect as client to " << remote_url[stream]
+              <<" at port " << port <<  ": " << pt->connected);
   }
  
   if(!pt->connected) {
@@ -300,9 +293,7 @@ void* MPW_InitStream(void* args)
       sock->create();
 
       bool bound = sock->bind(port);
-      #if PERF_REPORT > 1
-        cout << "[" << stream << "] Trying to bind as server at " << port << ". Result = " << bound << endl;
-      #endif
+      LOG_DEBUG("[" << stream << "] Trying to bind as server at " << port << ". Result = " << bound);
       
       if (!bound) {
         LOG_WARN("Bind on ch #"<< stream <<" failed.");
@@ -312,9 +303,7 @@ void* MPW_InitStream(void* args)
 
       if (sock->listen()) {
           pt->connected = sock->accept();
-          #if PERF_REPORT > 1
-          cout <<  "[" << stream << "] Attempt to act as server: " << pt->connected << endl;
-          #endif
+          LOG_DEBUG("[" << stream << "] Attempt to act as server: " << pt->connected);
           if (pt->connected) { isclient[stream] = 0; }
       }
       else {
@@ -377,9 +366,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
       cport.push_back(cports[i]);
     }
 
-    #if PERF_REPORT > 1
-      cout << url[i] << " " << ports[i] << " " << cports[i] << endl;
-    #endif
+    LOG_DEBUG(url[i] << " " << ports[i] << " " << cports[i]);
   }
   
 #if MPW_PacingMode == 1
@@ -445,9 +432,7 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
 /* Initialize the MPWide. set client to 1 for one machine, and to 0 for the other. */
 int MPW_Init(string* url, int* ports, int* cports, int numstreams)
 {
-  #if PERF_REPORT > 0
-    cout << "Initialising..." << endl;
-  #endif
+  LOG_INFO("Initialising...");
 
   int stream_indices[numstreams];
   for(int i=0; i<numstreams; i++) {
@@ -480,15 +465,12 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
   MPW_AddStreams(hosts, path_ports, path_cports, streams_in_path);
   delete [] hosts;
 
-  #if PERF_REPORT > 0
-  cout << "Creating New Path:" << endl;
-  cout << host << " " <<  server_side_base_port << " " << streams_in_path << " streams."  << endl;
-    #if PERF_REPORT > 1
-    for(int i=0; i<streams_in_path; i++) {
-      cout << "Stream[" << i << "]: " << paths[paths.size()-1]->streams[i] << endl;
-    } 
-    #endif
-  #endif
+  LOG_INFO("Creating New Path:");
+  LOG_INFO(host << " " <<  server_side_base_port << " " << streams_in_path << " streams.");
+  
+  for(int i=0; i<streams_in_path; i++) {
+    LOG_DEBUG("Stream[" << i << "]: " << paths[paths.size()-1]->streams[i]);
+  } 
 
   /* Return the identifier for the MPWPath we just created. */
   return path_id;
@@ -644,9 +626,7 @@ int MPW_Finalize()
   for (vector<MPWPath *>::iterator it = paths.begin(); it != paths.end(); ++it) {
     if (*it) delete *it;
   }
-  #if PERFREPORT > 0
-  cout << "MPWide sockets are closed." << endl;
-  #endif
+  LOG_INFO("MPWide sockets are closed.");
   free(ta); //clean global thread memory
   sleep(1);
   return 1;
@@ -737,9 +717,8 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
 
   #ifdef PERF_TIMING
   t = GetTime() - t;
-    #if PERF_REPORT > 2
-    cout << "This Send/Recv took: " << t << "s. Rate: " << (sendsize+recvsize)/(t*1024*1024) << "MB/s. ch=" << channel << "/" << channel2 << endl;
-    #endif
+  LOG_DEBUG("This Send/Recv took: " << t << "s. Rate: " << (sendsize+recvsize)/(t*1024*1024)
+            << "MB/s. ch=" << channel << "/" << channel2);
   SendRecvTime += t;
   #endif
   return ret;
@@ -770,9 +749,7 @@ void* MPW_Relay(void* args)
   char* buf      = (char *) malloc(bufsize);
   char* buf2     = (char *) malloc(bufsize);
   
-  #if PERF_REPORT > 1
-  cout << "Starting Relay Channel #" << channel << endl;
-  #endif
+  LOG_DEBUG("Starting Relay Channel #" << channel);
   int tmp = 0;
 
   while(1) {
@@ -788,17 +765,13 @@ void* MPW_Relay(void* args)
       }  
       tmp = client[channel]->irecv(buf+n,min(bufsize-n,relay_rsize));
       n += tmp; 
-      #if PERF_REPORT == 4
-      cout << "Retrieved from 1: " << n << endl;
-      #endif
+      LOG_TRACE("Retrieved from 1: " << n);
     }
     /* ...forward to channel 2. */
     if(mode2/2 == 1 && n > 0) {
       tmp = client[channel2]->isend(buf+ns,min(n-ns,relay_ssize));
       ns += tmp;
-      #if PERF_REPORT == 4
-      cout << "Sent to 2: " << ns << endl;
-      #endif
+      LOG_TRACE("Sent to 2: " << ns);
     }
     
     // Recv from channel 2 
@@ -808,17 +781,13 @@ void* MPW_Relay(void* args)
       }
       tmp = client[channel2]->irecv(buf2+n2,min(bufsize-n2,relay_rsize));
       n2 += tmp;
-      #if PERF_REPORT == 4
-      cout << "Retrieved from 2: " << n2 << endl;
-      #endif
+      LOG_TRACE("Retrieved from 2: " << n2);
     }
     // ...forward to channel 1. 
     if(mode/2 == 1 && n2 > 0) {
       tmp = client[channel]->isend(buf2+ns2,min(n2-ns2,relay_ssize));
       ns2 += tmp;
-      #if PERF_REPORT == 4
-      cout << "Sent to 1: " << ns2 << endl;
-      #endif
+      LOG_TRACE("Sent to 1: " << ns2);
     }
     
     #if MPW_PacingMode == 1
@@ -1056,7 +1025,7 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 #ifdef PERF_TIMING
   t = GetTime() - t;
   
-  #if PERF_REPORT>0
+  #if LOG_LVL >= LOG_INFO
   long long int total_size = totalsendsize + dyn_recvsize;
 
   cout << "DSendRecv: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
@@ -1206,9 +1175,9 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
 
 
   #ifdef PERF_TIMING
-  t = GetTime() - t;
+    t = GetTime() - t;
 
-    #if PERF_REPORT>0
+    #if LOG_LVL >= LOG_INFO
       long long int total_size = sendsize2 + (ta[0].dyn_recvsize)[0];
       cout << "Cycle: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
@@ -1326,7 +1295,7 @@ int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long 
   #ifdef PERF_TIMING
     t = GetTime() - t;
 
-    #if PERF_REPORT>0
+    #if LOG_LVL >= LOG_INFO
       long long int total_size = 0;
       for(int i=0;i<num_channels;i++) {
         total_size += sendsize[i]+recvsize[i];

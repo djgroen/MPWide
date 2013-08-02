@@ -12,10 +12,7 @@
 
 /* Enable (define)/Disable(don't define) Performance Timing Measurements */
 #define PERF_TIMING
-/* Performance report verbosity: 1 reports speeds on send/recv. 2 reports on initialization details.
- 3 also reports number of steps taken to recv packages. 4 becomes ridiculously verbose, with e.g.
- reports for accumulated bytes after every chunk is received. */
-#define PERF_REPORT 2
+
 // Run a performance monitoring thread
 #define MONITORING 1
 
@@ -42,6 +39,7 @@
 #define LVL_WARN 2
 #define LVL_INFO 4
 #define LVL_DEBUG 6
+#define LVL_TRACE 6
 
 // SET THE LOG LEVEL
 #define LOG_LVL LVL_ERR
@@ -65,6 +63,11 @@
 #define LOG_DEBUG(MSG) cout << MSG << endl
 #else
 #define LOG_DEBUG(MSG)
+#endif
+#if LOG_LVL >= LVL_TRACE
+#define LOG_TRACE(MSG) cout << MSG << endl
+#else
+#define LOG_TRACE(MSG)
 #endif
 
 #define max(X,Y) ((X) > (Y) ? (X) : (Y))
