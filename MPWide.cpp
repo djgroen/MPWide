@@ -78,9 +78,9 @@ static int tcpbuf_rsize = 8*1024;
 static int relay_ssize = 8*1024;
 static int relay_rsize = 8*1024;
 
-#if PacingMode == 1
+#if MPW_PacingMode == 1
   static double pacing_rate = 100*1024*1024; //Pacing rate per stream.
-  static useconds_t pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
+  static useconds_t pacing_sleeptime = useconds_t(1000000/(pacing_rate/(1.0*tcpbuf_ssize))); //Sleep time for SendRecvs in microseconds.
 
   double MPW_getPacingRate() {
     return pacing_rate;
@@ -92,7 +92,7 @@ static int relay_rsize = 8*1024;
     }
     else {
       pacing_rate = rate;
-      pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
+      pacing_sleeptime = useconds_t(1000000/(pacing_rate/(1.0*tcpbuf_ssize)));
       LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.");
     }
   }
@@ -111,7 +111,8 @@ static void autotunePacingRate()
   else
     MPW_setPacingRate((1200*1024*1024)/max_streams);
 }
-#endif
+#endif // MPW_PacingMode == 1
+
 static void showSettings()
 {
   LOG_INFO("-----------------------------------------------------------");
@@ -381,7 +382,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
     #endif
   }
   
-#if PacingMode == 1
+#if MPW_PacingMode == 1
   if(MPWideAutoTune) {
     autotunePacingRate();
   }
@@ -729,7 +730,7 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
         mask |= MPWIDE_SOCKET_WRMASK; //don't check for write anymore
     }
 
-    #if PacingMode == 1
+    #if MPW_PacingMode == 1
     usleep(pacing_sleeptime);
     #endif
   }
@@ -820,7 +821,7 @@ void* MPW_Relay(void* args)
       #endif
     }
     
-    #if PacingMode == 1
+    #if MPW_PacingMode == 1
     usleep(pacing_sleeptime);
     #endif
   }
@@ -978,7 +979,7 @@ void *MPW_TDynEx(void *args)
         }
       }
     }
-    #if PacingMode == 1
+    #if MPW_PacingMode == 1
     usleep(pacing_sleeptime);
     #endif
   }
