@@ -19,12 +19,6 @@
  * along with MPWide.  If not, see <http://www.gnu.org/licenses/>.
  * **************************************************************/
 
-<<<<<<< HEAD
-#define REPORT_BUFFERSIZES 0
-#define EXIT_ON_ERROR
-
-=======
->>>>>>> 9adcb4c0c6c71c7d1af1ea451f7aa7e7f05f3a67
 #include "Socket.h"
 #include "string.h"
 #include <string.h>
@@ -183,18 +177,11 @@ bool Socket::send ( const char* s, long long int size ) const
       cout << "s";
       #endif
       if(ok<0) {
-<<<<<<< HEAD
-        fprintf(stderr,"Socket error: %d, %s\n",ok, strerror(errno));
-        fflush(stderr);
-        #ifdef EXIT_ON_ERROR
-        exit(9);
-=======
         LOG_ERR("Socket error: " << ok << ", " << strerror(errno));
         #if EXIT_ON_SENDRECV_ERROR == 1
         exit(1);
         #else
         return false;
->>>>>>> 9adcb4c0c6c71c7d1af1ea451f7aa7e7f05f3a67
         #endif
         }
       }
@@ -259,14 +246,6 @@ int Socket::recv ( char* s, long long int size ) const
 int Socket::irecv ( char* s, long long int size ) const
 {
   int status = ::recv ( m_sock, s, size, 0 );
-<<<<<<< HEAD
-  if ( status < 0 ) {
-    cout << "irecv: status = " << status << " errno = " << errno << "/" << strerror(errno) << endl;
-    #ifdef EXIT_ON_ERROR
-    exit(1);
-    #endif
-  }
-=======
   #if LOG_LVL >= LVL_ERR || EXIT_ON_SENDRECV_ERROR == 1
     if ( status <= 0 ) {
       #if LOG_LVL >= LVL_ERR
@@ -281,21 +260,12 @@ int Socket::irecv ( char* s, long long int size ) const
       #endif
     }
   #endif
->>>>>>> 9adcb4c0c6c71c7d1af1ea451f7aa7e7f05f3a67
   return status;
 }
 
 int Socket::isend ( const char* s, long long int size ) const
 {
   int status = ::send ( m_sock, s, size, tcp_send_flag );
-<<<<<<< HEAD
-  if ( status < 0 ) {
-    cerr << "isend: status = " << status << " errno = " << errno << "/"<< strerror(errno) << endl;
-    #ifdef EXIT_ON_ERROR
-    exit(1);
-    #endif
-  }
-=======
   #if LOG_LVL >= LVL_ERR || EXIT_ON_SENDRECV_ERROR == 1
     if ( status < 0 ) {
       LOG_ERR("isend: status = " << status << " errno = " << errno << "/"<< strerror(errno));
@@ -304,7 +274,6 @@ int Socket::isend ( const char* s, long long int size ) const
       #endif
     }
   #endif
->>>>>>> 9adcb4c0c6c71c7d1af1ea451f7aa7e7f05f3a67
   return status;
 }
 
