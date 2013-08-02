@@ -33,15 +33,10 @@
 
 #include "mpwide-macros.h"
 
-int MPWideAutoTune = 1;
+static bool MPWideAutoTune = true;
 
 void MPW_setAutoTuning(bool b) {
-  if(b) {
-    MPWideAutoTune = 1;
-  }
-  else {
-    MPWideAutoTune = 0;
-  }
+  MPWideAutoTune = b;
 }
 
 using namespace std;
@@ -388,7 +383,7 @@ void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
   }
   
 #if PacingMode == 1
-  if(MPWideAutoTune == 1) {
+  if(MPWideAutoTune) {
     autotunePacingRate();
   }
 #endif
@@ -502,7 +497,7 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
 int MPW_ConnectPath(int path_id, bool server_wait) {
   int ret = MPW_InitStreams(paths[path_id]->streams, paths[path_id]->num_streams, server_wait);
   
-  if (MPWideAutoTune == 1 && ret >= 0)
+  if (MPWideAutoTune && ret >= 0)
   {
     const int default_window = 32*1024*1024/paths[path_id]->num_streams;
     for(int j=0; j<paths[path_id]->num_streams; j++)
