@@ -419,7 +419,7 @@ static int reserveAvailableStreamNumber(int total_streams)
       streak = 0;
     }
   }
-  
+  // fall through
   if (num_streams + total_streams <= MAX_NUM_STREAMS) {
     const int stream_number = num_streams;
     num_streams += total_streams;
@@ -437,7 +437,7 @@ static int reserveAvailablePathNumber()
     if (paths[i] == NULL)
       return i;
   }
-
+  // fall through
   if (num_paths < MAX_NUM_PATHS) {
     return num_paths++;
   } else {
