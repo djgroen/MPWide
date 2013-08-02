@@ -27,6 +27,9 @@
 
 // Use a smaller number of streams for small messages 
 #define OptimizeStreamCount 1
+// standard maximum segment size * 2.
+#define BytesPerStream 2*1380
+
 /* TimeOut in milliseconds. 0 means no timeout */
 #define InitStreamTimeOut 1
 
