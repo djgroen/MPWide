@@ -62,8 +62,6 @@ void MPW_setPathWin(int path, int size);
 
 /* Close channels. */
 void MPW_CloseChannels(int* channels , int num_channels);
-/* Reopen them. */
-void MPW_ReOpenChannels(int* channels, int num_channels);
 
 /* Close all sockets and free data structures related to the library. */
 int MPW_Finalize();

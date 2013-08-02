@@ -9,6 +9,8 @@
 #ifndef CMuscle_mpwide_macros_h
 #define CMuscle_mpwide_macros_h
 
+#define MAX_NUM_STREAMS 10000
+#define MAX_NUM_PATHS 1000
 
 /* Enable (define)/Disable(don't define) Performance Timing Measurements */
 #define PERF_TIMING
