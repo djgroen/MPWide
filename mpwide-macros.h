@@ -46,28 +46,34 @@
 // SET THE LOG LEVEL
 #define LOG_LVL LVL_ERR
 
+#if LOG_LVL > LVL_NONE
+#include <pthread.h>
+static pthread_mutex_t __log_mutex__ = PTHREAD_MUTEX_INITIALIZER;
+#define DO_LOG_(MSG) { pthread_mutex_lock(&__log_mutex__); cout << MSG << endl; pthread_mutex_unlock(&__log_mutex__); }
+#endif
+
 #if LOG_LVL >= LVL_ERR
-#define LOG_ERR(MSG) cout << MSG << endl
+#define LOG_ERR(MSG) DO_LOG_(MSG)
 #else
 #define LOG_ERR(MSG)
 #endif
 #if LOG_LVL >= LVL_WARN
-#define LOG_WARN(MSG) cout << MSG << endl
+#define LOG_WARN(MSG) DO_LOG_(MSG)
 #else
 #define LOG_WARN(MSG)
 #endif
 #if LOG_LVL >= LVL_INFO
-#define LOG_INFO(MSG) cout << MSG << endl
+#define LOG_INFO(MSG) DO_LOG_(MSG)
 #else
 #define LOG_INFO(MSG)
 #endif
 #if LOG_LVL >= LVL_DEBUG
-#define LOG_DEBUG(MSG) cout << MSG << endl
+#define LOG_DEBUG(MSG) DO_LOG_(MSG)
 #else
 #define LOG_DEBUG(MSG)
 #endif
 #if LOG_LVL >= LVL_TRACE
-#define LOG_TRACE(MSG) cout << MSG << endl
+#define LOG_TRACE(MSG) DO_LOG_(MSG)
 #else
 #define LOG_TRACE(MSG)
 #endif
