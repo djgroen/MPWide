@@ -18,19 +18,20 @@
  * You should have received a copy of the GNU General Public License
  * along with MPWide.  If not, see <http://www.gnu.org/licenses/>.
  * **************************************************************/
+#include "MPWide.h"
+#include "Socket.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "MPWide.h"
 #include <errno.h>
-#include "Socket.h"
-#include "serialization.h"
 #include <sys/time.h>
 #include <pthread.h>
 #include <cstdlib>
 #include <vector>
 #include <unistd.h>
 
+#include "serialization.h"
 #include "mpwide-macros.h"
 
 // forward declarations

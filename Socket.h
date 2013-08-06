@@ -19,8 +19,8 @@
  * along with MPWide.  If not, see <http://www.gnu.org/licenses/>.
  * **************************************************************/
 
-#ifndef Socket_class
-#define Socket_class
+#ifndef MPW_Socket_class
+#define MPW_Socket_class
 
 #include <sys/types.h>
 #include <sys/socket.h>
