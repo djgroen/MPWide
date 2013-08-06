@@ -69,4 +69,4 @@ TestRestart: TestRestart.cpp
 Forwarder: Forwarder.cpp
 
 clean:
-	rm -f *.o MPWTest MPWTestConcurrent MPWTestRestart MPWDataGather MPWForwarder MPWAmuseAgent MPWFileCopy libMPW.a libMPW.$(SO_EXT)* bin lib include
+	rm -f *.o MPWTest MPWTestConcurrent MPWTestRestart MPWDataGather MPWForwarder MPWAmuseAgent MPWFileCopy libMPW.a libMPW.$(SO_EXT)* bin lib include mpw-cp

@@ -20,13 +20,13 @@
  * **************************************************************/
 
 #include "Socket.h"
-#include "string.h"
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
 #include <cstdlib>
 #include <stdio.h>
+#include <netinet/tcp.h>
 
 #include "mpwide-macros.h"
 
@@ -37,6 +37,7 @@ Socket::Socket() :
 {
   memset(&m_addr, 0, sizeof( m_addr ));
   set_non_blocking(false);
+  set_no_delay(true);
 }
 
 Socket::~Socket()
@@ -350,6 +351,12 @@ bool Socket::connect ( const string host, const int port )
     LOG_ERR("socket is NOT connected! " << error_buf);
     return false;
   }
+}
+
+void Socket::set_no_delay(const bool no_delay)
+{
+    int state = no_delay ? 1 : 0;
+    setsockopt(m_sock, IPPROTO_TCP, TCP_NODELAY, &state, sizeof(state));
 }
 
 void Socket::set_non_blocking ( const bool b )
