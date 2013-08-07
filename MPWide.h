@@ -23,7 +23,7 @@
 using namespace std;
 
 /* Enable/disable software-based packet pacing. */
-#define PacingMode 1
+#define MPW_PacingMode 1
 
 char* MPW_DNSResolve(char* host);
 
@@ -62,8 +62,6 @@ void MPW_setPathWin(int path, int size);
 
 /* Close channels. */
 void MPW_CloseChannels(int* channels , int num_channels);
-/* Reopen them. */
-void MPW_ReOpenChannels(int* channels, int num_channels);
 
 /* Close all sockets and free data structures related to the library. */
 int MPW_Finalize();
@@ -106,7 +104,7 @@ bool MPW_Has_NBE_Finished(int NBE_id);
 void MPW_Wait(int NBE_id);
 
 
-#if PacingMode == 1
+#if MPW_PacingMode == 1
 /* Get and set rates for pacing data. */
 double MPW_getPacingRate();
 void   MPW_setPacingRate(double rate);
