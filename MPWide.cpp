@@ -18,64 +18,46 @@
  * You should have received a copy of the GNU General Public License
  * along with MPWide.  If not, see <http://www.gnu.org/licenses/>.
  * **************************************************************/
+#include "MPWide.h"
+#include "Socket.h"
+
 #include <iostream>
 #include <fstream>
 #include <string>
-#include "MPWide.h"
 #include <errno.h>
-#include "Socket.h"
-#include "serialization.h"
 #include <sys/time.h>
 #include <pthread.h>
 #include <cstdlib>
 #include <vector>
 #include <unistd.h>
 
+#include "serialization.h"
 #include "mpwide-macros.h"
 
-int MPWideAutoTune = 1;
-
-void MPW_setAutoTuning(bool b) {
-  if(b) {
-    MPWideAutoTune = 1;
-  }
-  else {
-    MPWideAutoTune = 0;
-  }
-}
+// forward declarations
+class MPWPath;
+struct thread_tmp;
 
 using namespace std;
 
+bool MPWideAutoTune = true;
+
 /* STREAM-specific definitions */
-static vector<int> port;
-static vector<int> cport;
-static vector<int> isclient;
-static vector<Socket*> client;
-static vector<string> remote_url;
+static int *port = NULL;
+static int *cport = NULL;
+static int *isclient = NULL;
+static Socket **client = NULL;
+static string *remote_url = NULL;
+
+/* global thread memory */
+static thread_tmp** ta = NULL;
+
 // length of all the above vectors:
 static int num_streams = 0;
 
-// This is set to true on the first invocation of MPW_Init. MPW_EMPTY is given a 1-byte buffer.
-static bool MPW_INITIALISED = false;
-static char *MPW_EMPTY = new char[1];
-
-/* PATH-specific definitions */
-class MPWPath {
-  public: 
-    string remote_url; // end-point of the path
-    int *streams; // id numbers of the streams used
-    int num_streams; // number of streams
-
-    MPWPath(string remote_url, int* str, int numstr)
-      : remote_url(remote_url), num_streams(numstr)
-    {
-      streams = new int[numstr];
-      memcpy(streams, str, num_streams*sizeof(int));
-    }
-    ~MPWPath() { delete [] streams; }
-};
 /* List of paths. */
-static vector<MPWPath*> paths;
+static MPWPath **paths = NULL;
+static int num_paths = 0;
 
 /* Send and Recv occurs in chunks of size tcpbuf_ssize/rsize.
  * Setting this to 1MB or higher gave problems with Amsterdam-Drexel test. */
@@ -84,9 +66,47 @@ static int tcpbuf_rsize = 8*1024;
 static int relay_ssize = 8*1024;
 static int relay_rsize = 8*1024;
 
-#if PacingMode == 1
+/* PATH-specific definitions */
+class MPWPath {
+public:
+  string remote_url; // end-point of the path
+  int *streams; // id numbers of the streams used
+  int num_streams; // number of streams
+  
+  MPWPath(string remote_url, int* str, int numstr)
+  : remote_url(remote_url), num_streams(numstr)
+  {
+    streams = new int[numstr];
+    memcpy(streams, str, num_streams*sizeof(int));
+  }
+  ~MPWPath() { delete [] streams; }
+};
+
+/* thread information */
+struct thread_tmp {
+  long long int sendsize, recvsize;
+  long long int* dyn_recvsize; //For DynEx.
+  int thread_id;
+  int channel;
+  int numchannels;
+  int numrchannels; //Cycle only.
+  char* sendbuf;
+  char* recvbuf;
+};
+
+/* socket startup information */
+struct init_tmp {
+  int stream;
+  Socket *sock;
+  int port;
+  int cport;
+  bool server_wait;
+  bool connected;
+};
+
+#if MPW_PacingMode == 1
   static double pacing_rate = 100*1024*1024; //Pacing rate per stream.
-  static useconds_t pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize)); //Sleep time for SendRecvs in microseconds.
+  static useconds_t pacing_sleeptime = useconds_t(1000000/(pacing_rate/(1.0*tcpbuf_ssize))); //Sleep time for SendRecvs in microseconds.
 
   double MPW_getPacingRate() {
     return pacing_rate;
@@ -98,26 +118,31 @@ static int relay_rsize = 8*1024;
     }
     else {
       pacing_rate = rate;
-      pacing_sleeptime = 1000000/(pacing_rate/(1.0*tcpbuf_ssize));
+      pacing_sleeptime = useconds_t(1000000/(pacing_rate/(1.0*tcpbuf_ssize)));
       LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.");
     }
   }
 
-static void autotunePacingRate()
-{
-  int max_streams = 0;
-  for(unsigned int i=0; i<paths.size(); i++)
+  static void autotunePacingRate()
   {
-    if (paths[i] && paths[i]->num_streams > max_streams)
-      max_streams = paths[i]->num_streams;
+    int max_streams = 0;
+    for(int i = 0; i < num_paths; i++)
+    {
+      if (paths[i] && paths[i]->num_streams > max_streams)
+        max_streams = paths[i]->num_streams;
+    }
+    
+    if (max_streams < 3)
+      MPW_setPacingRate(1200*1024*1024);
+    else
+      MPW_setPacingRate((1200*1024*1024)/max_streams);
   }
-  
-  if (max_streams < 3)
-    MPW_setPacingRate(1200*1024*1024);
-  else
-    MPW_setPacingRate((1200*1024*1024)/max_streams);
+#endif // MPW_PacingMode == 1
+
+void MPW_setAutoTuning(bool b) {
+  MPWideAutoTune = b;
 }
-#endif
+
 static void showSettings()
 {
   LOG_INFO("-----------------------------------------------------------");
@@ -136,33 +161,11 @@ static void showSettings()
   LOG_INFO("END OF SETUP PHASE.");
 }
 
-typedef struct thread_tmp {
-  long long int sendsize, recvsize;
-  long long int* dyn_recvsize; //For DynEx.
-  int thread_id;
-  int channel;
-  int numchannels;
-  int numrchannels; //Cycle only.
-  char* sendbuf;
-  char* recvbuf;
-}thread_tmp;
-
-/* global thread memory */
-static thread_tmp* ta;
-
 #ifdef PERF_TIMING
   double GetTime(){
     struct timeval tv;
-    gettimeofday( &tv, NULL);
-    double time;
-    time = (tv.tv_sec + (double)tv.tv_usec*1e-6);
-    return time;
-  }
-
-  void MPW_setChunkSize(int sending, int receiving) {
-    tcpbuf_ssize = sending;
-    tcpbuf_rsize = receiving;
-    LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
+    gettimeofday(&tv, NULL);
+    return tv.tv_sec + 1.0e-6*tv.tv_usec;
   }
 
   double BarrierTime   = 0.0; //4 newly introduced globals for monitoring purposes
@@ -171,15 +174,10 @@ static thread_tmp* ta;
   double UnpackingTime = 0.0;
 #endif
 
-/* malloc function, duplicated from the TreePM code. */
-void *MPWmalloc( const size_t size){
-  void *p;
-  p = malloc( size);
-  if( p == NULL){
-    fprintf( stderr, "malloc error size %ld\n", sizeof(size));
-    exit(1);
-  }
-  return p;
+void MPW_setChunkSize(int sending, int receiving) {
+  tcpbuf_ssize = sending;
+  tcpbuf_rsize = receiving;
+  LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
 }
 
 /* Convert a host name to an ip address. */
@@ -223,10 +221,8 @@ int MPW_NumChannels(){
 #if MONITORING == 1
 long long int bytes_sent;
 bool stop_monitor = false;
-#endif
 
 #ifdef PERF_TIMING
-#if MONITORING == 1
 /* Performs per-second bandwidth monitoring in real-time */
 void *MPW_TBandwidth_Monitor(void *args)
 {
@@ -248,66 +244,51 @@ void *MPW_TBandwidth_Monitor(void *args)
   myfile.close();
   return NULL;
 }
-#endif
-#endif
-
-typedef struct init_tmp {
-  int stream;
-  Socket *sock;
-  int port;
-  int cport;
-  bool server_wait;
-  bool connected;
-}init_tmp;
+#endif // ifdef PERF_TIMING
+#endif // MONITORING == 1
 
 void* MPW_InitStream(void* args) 
 {
-  init_tmp t = *((init_tmp *) args);
-  init_tmp *pt = ((init_tmp *) args);
+  init_tmp &t = *((init_tmp *) args);
 
   Socket *sock = t.sock;
-  int stream = t.stream;
-  int port = t.port;
-  int cport = t.cport;
-  bool server_wait = t.server_wait;
+  const int stream = t.stream;
+  const int port = t.port;
+  const int cport = t.cport;
+  const bool server_wait = t.server_wait;
 
   if(isclient[stream]) {
     sock->create();
     /* Patch to bypass firewall problems. */
     if(cport>0) {
-      #if PERF_REPORT > 1
-        cout << "[" << stream << "] Trying to bind as client at " << (cport) << endl;
-      #endif
+      LOG_DEBUG("[" << stream << "] Trying to bind as client at " << (cport));
       int bound = sock->bind(cport);
     }
 
     /* End of patch*/
-    pt->connected = sock->connect(remote_url[stream],port);
-    LOG_WARN("Server wait & connected " << server_wait << "," << pt->connected);
+    t.connected = sock->connect(remote_url[stream],port);
+    LOG_WARN("Server wait & connected " << server_wait << "," << t.connected);
 
     #if InitStreamTimeOut == 0
     if (!server_wait) {
-      while(!pt->connected) {
+      while(!t.connected) {
         usleep(50000);
-        pt->connected = client[stream].connect(remote_url[stream],port);
+        t.connected = client[stream].connect(remote_url[stream],port);
       }
     }
     #endif
     
-    #if PERF_REPORT > 1
-      cout << "[" << stream << "] Attempt to connect as client to " << remote_url[stream] <<" at port " << port <<  ": " << pt->connected << endl;
-    #endif
+    LOG_DEBUG("[" << stream << "] Attempt to connect as client to " << remote_url[stream]
+              <<" at port " << port <<  ": " << t.connected);
   }
  
-  if(!pt->connected) {
+  if(!t.connected) {
     sock->close();
     if (server_wait) {
       sock->create();
 
       bool bound = sock->bind(port);
-      #if PERF_REPORT > 1
-        cout << "[" << stream << "] Trying to bind as server at " << port << ". Result = " << bound << endl;
-      #endif
+      LOG_DEBUG("[" << stream << "] Trying to bind as server at " << port << ". Result = " << bound);
       
       if (!bound) {
         LOG_WARN("Bind on ch #"<< stream <<" failed.");
@@ -316,11 +297,9 @@ void* MPW_InitStream(void* args)
       }
 
       if (sock->listen()) {
-          pt->connected = sock->accept();
-          #if PERF_REPORT > 1
-          cout <<  "[" << stream << "] Attempt to act as server: " << pt->connected << endl;
-          #endif
-          if (pt->connected) { isclient[stream] = 0; }
+          t.connected = sock->accept();
+          LOG_DEBUG("[" << stream << "] Attempt to act as server: " << t.connected);
+          if (t.connected) { isclient[stream] = 0; }
       }
       else {
         LOG_WARN("Listen on ch #"<< stream <<" failed.");
@@ -335,77 +314,51 @@ void* MPW_InitStream(void* args)
 /* Close down individual streams. */
 void MPW_CloseChannels(int* channel, int numchannels) 
 {
-  for(int i=0; i<numchannels; i++) {
+  for(int i = 0; i < numchannels; i++) {
     LOG_INFO("Closing channel #" << channel[i] << " with port = " << port[i] << " and cport = " << cport[i]);
     client[channel[i]]->close();
   }
 }
 
-/* Reopen individual streams. 
- * This is not required at startup. */
-void MPW_ReOpenChannels(int* channel, int numchannels) 
-{
-  pthread_t streams[numchannels];
-  init_tmp t[numchannels];
-
-  for(int i = 0; i < numchannels; i++) {
-    int stream = channel[i];
-    t[i].stream    = stream;
-    t[i].sock = client[stream];
-    t[i].port = port[stream];
-    t[i].cport = cport[stream];
-    LOG_INFO("ReOpening client channel #" << stream << " with port = " << port[stream] << " and cport = " << cport[stream]);
-    int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
-  }
-
-  for(int i = 0; i < numchannels; i++) {
-    pthread_join(streams[i], NULL);
-  }
-}
-
-//internal
-void MPW_AddStreams(string* url, int* ports, int* cports, int numstreams) {
-  num_streams += numstreams;
-
-  for(int i = 0; i<numstreams; i++) {
-    LOG_DEBUG("MPW_DNSResolve resolves " << url[i] << " to address " << MPW_DNSResolve(url[i]) << ".");
-    remote_url.push_back(MPW_DNSResolve(url[i]));
-    client.push_back(new Socket());
-    port.push_back(ports[i]);
-    
-    if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
-      isclient.push_back(0);
-      cport.push_back(-1);
-      LOG_INFO("Empty IP address given: Switching to Server-only mode.");
-    } else {
-      isclient.push_back(1);
-      cport.push_back(cports[i]);
-    }
-
-    #if PERF_REPORT > 1
-      cout << url[i] << " " << ports[i] << " " << cports[i] << endl;
-    #endif
-  }
-  
-#if PacingMode == 1
-  if(MPWideAutoTune == 1) {
-    autotunePacingRate();
-  }
-#endif
-  
-  if (MPW_INITIALISED == false) {
-    MPW_INITIALISED = true;
+// internal
+void MPW_AddStreams(string* url, int* ports, int* cports, const int *stream_indices, const int numstreams) {
+  if (client == NULL) {
+    client     = new Socket*[MAX_NUM_STREAMS];
+    port       = new int[MAX_NUM_STREAMS];
+    cport      = new int[MAX_NUM_STREAMS];
+    isclient   = new int[MAX_NUM_STREAMS];
+    remote_url = new string[MAX_NUM_STREAMS];
+    ta         = new thread_tmp*[MAX_NUM_STREAMS];
+    paths      = new MPWPath*[MAX_NUM_PATHS];
 #ifdef PERF_TIMING
 #if MONITORING == 1
     pthread_t monitor;
     int code = pthread_create(&monitor, NULL, MPW_TBandwidth_Monitor, NULL);
 #endif
 #endif
-    /* Allocate global thread memory */
-    ta = (thread_tmp *) MPWmalloc( sizeof(thread_tmp) * num_streams);
   }
-  else {
-    ta = (thread_tmp *) realloc(ta, sizeof(thread_tmp) * num_streams);
+  
+  for(int i = 0; i < numstreams; i++) {
+    const int stream = stream_indices[i];
+
+    client[stream]     = new Socket();
+    port[stream]       = ports[i];
+    ta[stream]         = new thread_tmp;
+    ta[stream]->channel = stream;
+	  LOG_INFO("Stream number " << stream);
+    remote_url[stream] = MPW_DNSResolve(url[i]);
+    LOG_DEBUG("MPW_DNSResolve resolves " << url[i] << " to address " << remote_url[stream] << ".");
+    
+    if(url[i].compare("0") == 0 || url[i].compare("0.0.0.0") == 0) {
+      isclient[stream] = 0;
+      cport[stream]    = -1;
+      LOG_INFO("Empty IP address given: Switching to Server-only mode.");
+    } else {
+      isclient[stream] = 1;
+      cport[stream]    = cports[i];
+    }
+
+    LOG_DEBUG(url[i] << " " << ports[i] << " " << cports[i]);
   }
 }
 
@@ -415,12 +368,12 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
 
   for(int i = 0; i < numstreams; i++) {
     int stream = stream_indices[i];
-    t[i].stream     = stream;
-    t[i].sock  = client[stream];
-    t[i].port  = port[stream];
-    t[i].cport = cport[stream];
+    t[i].stream      = stream;
+    t[i].sock        = client[stream];
+    t[i].port        = port[stream];
+    t[i].cport       = cport[stream];
     t[i].server_wait = server_wait;
-    t[i].connected = false;
+    t[i].connected   = false;
     if(i>0) {
       int code = pthread_create(&streams[i], NULL, MPW_InitStream, &t[i]);
     }
@@ -447,53 +400,103 @@ int MPW_InitStreams(int *stream_indices, int numstreams, bool server_wait) {
     return -1;
 }
 
+static int reserveAvailableStreamNumber(int total_streams)
+{
+  int streak = 0;
+  
+  /* Get next available contiguous streams */
+  for (int i = 0; i < num_streams; i++) {
+    if (client[i] == NULL) {
+      if (++streak == total_streams)
+        // Don't modify num_streams
+        return i + 1 - total_streams;
+    } else if (streak) {
+      streak = 0;
+    }
+  }
+  // fall through
+  if (num_streams + total_streams <= MAX_NUM_STREAMS) {
+    const int stream_number = num_streams;
+    num_streams += total_streams;
+    return stream_number;
+  } else {
+    LOG_ERR("ERROR: trying to create more than " << MAX_NUM_STREAMS << " streams");
+    return -1;
+  }
+}
+
+static int reserveAvailablePathNumber()
+{
+  /* Get next available path */
+  for (int i = 0; i < num_paths; ++i) {
+    if (paths[i] == NULL)
+      return i;
+  }
+  // fall through
+  if (num_paths < MAX_NUM_PATHS) {
+    return num_paths++;
+  } else {
+    LOG_ERR("ERROR: trying to create more than " << MAX_NUM_PATHS << " paths");
+    return -1;
+  }
+}
+
 /* Initialize the MPWide. set client to 1 for one machine, and to 0 for the other. */
 int MPW_Init(string* url, int* ports, int* cports, int numstreams)
 {
-  #if PERF_REPORT > 0
-    cout << "Initialising..." << endl;
-  #endif
+  LOG_INFO("Initialising...");
 
+  const int start_stream = reserveAvailableStreamNumber(numstreams);
+  if (start_stream == -1) return -1;
+  
   int stream_indices[numstreams];
-  for(int i=0; i<numstreams; i++) {
-    stream_indices[i] = num_streams + i; //if this is the first MPW_Init, then num_streams still equals 0 here.
+  for(int i = 0; i < numstreams; i++) {
+    stream_indices[i] = start_stream + i; //if this is the first MPW_Init, then num_streams still equals 0 here.
   }
 
-  MPW_AddStreams(url, ports, cports, numstreams);
+  MPW_AddStreams(url, ports, cports, stream_indices, numstreams);
   int ret = MPW_InitStreams(stream_indices, numstreams, true);
   showSettings();
   return ret;
 }
 
 /* Constructs a path. Return path id or negative error value. */
-int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int streams_in_path) {
+int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, const int streams_in_path) {
+  const int start_stream = reserveAvailableStreamNumber(streams_in_path);
+  const int path_id = reserveAvailablePathNumber();
+  
+  if (start_stream == -1 || path_id == -1) return -1;
+
   int path_ports[streams_in_path];
   int path_cports[streams_in_path];
 
   string *hosts = new string[streams_in_path];
   int stream_indices[streams_in_path];
-  for(int i=0; i<streams_in_path; i++) {
+  
+  for(int i = 0; i < streams_in_path; i++) {
     path_ports[i] = server_side_base_port + i;
     path_cports[i] = -2;
     hosts[i] = host;
-    stream_indices[i] = i + num_streams;
+    stream_indices[i] = start_stream + i;
   }
-
-  /* Add Path to paths Vector. */
-  paths.push_back(new MPWPath(host, stream_indices, streams_in_path));
-  int path_id = paths.size()-1;
-  MPW_AddStreams(hosts, path_ports, path_cports, streams_in_path);
+  
+  MPW_AddStreams(hosts, path_ports, path_cports, stream_indices, streams_in_path);
   delete [] hosts;
 
-  #if PERF_REPORT > 0
-  cout << "Creating New Path:" << endl;
-  cout << host << " " <<  server_side_base_port << " " << streams_in_path << " streams."  << endl;
-    #if PERF_REPORT > 1
-    for(int i=0; i<streams_in_path; i++) {
-      cout << "Stream[" << i << "]: " << paths[paths.size()-1]->streams[i] << endl;
-    } 
-    #endif
-  #endif
+  paths[path_id] = new MPWPath(host, stream_indices, streams_in_path);
+  
+#if MPW_PacingMode == 1
+  if(MPWideAutoTune) {
+    autotunePacingRate();
+  }
+#endif
+  
+  LOG_INFO("Creating New Path:");
+  LOG_INFO(host << " " <<  server_side_base_port << " " << streams_in_path << " streams.");
+  
+  for(int i=0; i<streams_in_path; i++) {
+    LOG_DEBUG("Stream[" << i << "]: " << paths[path_id]->streams[i]);
+  } 
 
   /* Return the identifier for the MPWPath we just created. */
   return path_id;
@@ -502,10 +505,10 @@ int MPW_CreatePathWithoutConnect(string host, int server_side_base_port, int str
 int MPW_ConnectPath(int path_id, bool server_wait) {
   int ret = MPW_InitStreams(paths[path_id]->streams, paths[path_id]->num_streams, server_wait);
   
-  if (MPWideAutoTune == 1 && ret >= 0)
+  if (MPWideAutoTune && ret >= 0)
   {
     const int default_window = 32*1024*1024/paths[path_id]->num_streams;
-    for(int j=0; j<paths[path_id]->num_streams; j++)
+    for(int j = 0; j < paths[path_id]->num_streams; j++)
       MPW_setWin(paths[path_id]->streams[j], default_window);
   }
   showSettings();
@@ -525,26 +528,22 @@ int MPW_CreatePath(string host, int server_side_base_port, int streams_in_path) 
   return path_id;
 }
 
-void DecrementStreamIndices(int q, int len) {
-  for(unsigned int i=0; i<paths.size(); i++) {
-    if (!paths[i])
-      continue;
-    for(int j=0; j<paths[i]->num_streams; j++) {
-      if(paths[i]->streams[j] > q) { 
-        paths[i]->streams[j] -= len;
+void EraseStream(int stream) {
+  delete client[stream];
+  client[stream] = NULL;
+  delete ta[stream];
+  
+  // Deleted last stream, move the stream counter back
+  if (stream + 1 == num_streams) {
+    for (int i = stream - 1; i >= 0; --i) {
+      if (client[i] != NULL) {
+        num_streams = i + 1;
+        return;
       }
     }
+    // If no streams are found, num_streams is 0
+    num_streams = 0;
   }
-}
-
-void EraseStream(int i) {
-  port.erase(port.begin()+i);
-  cport.erase(cport.begin()+i);
-  isclient.erase(isclient.begin()+i);
-  delete client[i];
-  client.erase(client.begin()+i);
-  remote_url.erase(remote_url.begin()+i);
-  num_streams--;
 }
 
 void MPW_setWin(int channel, int size) {
@@ -558,27 +557,25 @@ void MPW_setPathWin(int path, int size) {
 }
 
 // Return 0 on success (negative on failure).
-// It assumes that the array of streams in a path is contiguous
 int MPW_DestroyPath(int path) {
-  const int len = paths[path]->num_streams;
-  const int i = paths[path]->streams[0];
-  const int end = i + len;
-  
-  MPW_CloseChannels(paths[path]->streams, len);
-  port.erase(port.begin()+i, port.begin()+end);
-  cport.erase(cport.begin()+i, cport.begin()+end);
-  isclient.erase(isclient.begin()+i, isclient.begin()+end);
-  for (int j = i; j < end; j++) {
-    delete client[j];
+  for (int j = 0; j < paths[path]->num_streams; j++) {
+    EraseStream(paths[path]->streams[j]);
   }
-  client.erase(client.begin()+i, client.begin()+end);
-  remote_url.erase(remote_url.begin()+i, remote_url.begin()+end);
-  num_streams -= len;
-
-  DecrementStreamIndices(i, len);
 
   delete paths[path];
-  paths[path] = 0;
+  paths[path] = NULL;
+
+  // Reset num_paths, if this was the last path
+  if (path == num_paths - 1) {
+    for (int i = path - 1; i >= 0; --i) {
+      if (paths[i] != NULL) {
+        num_paths = i + 1;
+        return 0;
+      }
+    }
+    // If no paths are found, num_streams is 0
+    num_paths = 0;
+  }
   
   return 0;
 }
@@ -593,11 +590,11 @@ int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long
 }
 
 int MPW_Send(char* sendbuf, long long int sendsize, int path) {
-  return MPW_SendRecv(sendbuf, sendsize, MPW_EMPTY, 1, paths[path]->streams, paths[path]->num_streams);
+  return MPW_SendRecv(sendbuf, sendsize, NULL, 0, paths[path]->streams, paths[path]->num_streams);
 }
 
 int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
-  return MPW_SendRecv(MPW_EMPTY, 1, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
+  return MPW_SendRecv(NULL, 0, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
 }
 
 
@@ -643,17 +640,29 @@ int MPW_Finalize()
 #if MONITORING == 1
   stop_monitor = true;
 #endif
-  for (vector<Socket *>::iterator it = client.begin(); it != client.end(); ++it) {
-    delete *it;
+  for (int i = 0; i < num_paths; i++) {
+    if (paths[i])
+      delete paths[i];
   }
-  for (vector<MPWPath *>::iterator it = paths.begin(); it != paths.end(); ++it) {
-    if (*it) delete *it;
+  delete [] paths;
+  num_paths = 0;
+  
+  for (int i = 0; i < num_streams; i++) {
+    if (client[i]) {
+      delete client[i];
+      delete ta[i];
+    }
   }
-  #if PERFREPORT > 0
-  cout << "MPWide sockets are closed." << endl;
-  #endif
-  free(ta); //clean global thread memory
-  delete [] MPW_EMPTY;
+  delete [] client;
+  delete [] ta;
+  delete [] port;
+  delete [] cport;
+  delete [] remote_url;
+  delete [] isclient;
+  num_streams = 0;
+
+  LOG_INFO("MPWide sockets are closed.");
+  // Wait on any closing sockets
   sleep(1);
   return 1;
 }
@@ -663,12 +672,12 @@ int MPW_Finalize()
 /* Wrapping function for SendRecv in case no receiving is required. */
 void MPW_Send(char* sendbuf, long long int size, int* channels, int num_channels)
 {
-  MPW_SendRecv(sendbuf,size,MPW_EMPTY,1,channels,num_channels);
+  MPW_SendRecv(sendbuf,size,NULL,0,channels,num_channels);
 }
 
 void MPW_Recv(char* buf, long long int size, int* channels, int num_channels)
 {
-  MPW_SendRecv(MPW_EMPTY,1,buf,size,channels,num_channels);
+  MPW_SendRecv(NULL,0,buf,size,channels,num_channels);
 }
 
 /* Send/Recv between two processes. */
@@ -685,7 +694,7 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
   
   const Socket *wsock = client[base_channel % 65536];
   const Socket *rsock = base_channel < 65536 ? wsock : client[(base_channel/65536) - 1];
-
+  
   int mask = (recvsize == 0 ? MPWIDE_SOCKET_RDMASK : 0)
            | (sendsize == 0 ? MPWIDE_SOCKET_WRMASK : 0);
   
@@ -736,16 +745,15 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
         mask |= MPWIDE_SOCKET_WRMASK; //don't check for write anymore
     }
 
-    #if PacingMode == 1
+    #if MPW_PacingMode == 1
     usleep(pacing_sleeptime);
     #endif
   }
 
   #ifdef PERF_TIMING
   t = GetTime() - t;
-    #if PERF_REPORT > 2
-    cout << "This Send/Recv took: " << t << "s. Rate: " << (sendsize+recvsize)/(t*1024*1024) << "MB/s. ch=" << channel << "/" << channel2 << endl;
-    #endif
+  LOG_DEBUG("This Send/Recv took: " << t << "s. Rate: " << (sendsize+recvsize)/(t*1024*1024)
+            << "MB/s. ch=" << channel << "/" << channel2);
   SendRecvTime += t;
   #endif
   return ret;
@@ -776,9 +784,7 @@ void* MPW_Relay(void* args)
   char* buf      = (char *) malloc(bufsize);
   char* buf2     = (char *) malloc(bufsize);
   
-  #if PERF_REPORT > 1
-  cout << "Starting Relay Channel #" << channel << endl;
-  #endif
+  LOG_DEBUG("Starting Relay Channel #" << channel);
   int tmp = 0;
 
   while(1) {
@@ -794,17 +800,13 @@ void* MPW_Relay(void* args)
       }  
       tmp = client[channel]->irecv(buf+n,min(bufsize-n,relay_rsize));
       n += tmp; 
-      #if PERF_REPORT == 4
-      cout << "Retrieved from 1: " << n << endl;
-      #endif
+      LOG_TRACE("Retrieved from 1: " << n);
     }
     /* ...forward to channel 2. */
     if(mode2/2 == 1 && n > 0) {
       tmp = client[channel2]->isend(buf+ns,min(n-ns,relay_ssize));
       ns += tmp;
-      #if PERF_REPORT == 4
-      cout << "Sent to 2: " << ns << endl;
-      #endif
+      LOG_TRACE("Sent to 2: " << ns);
     }
     
     // Recv from channel 2 
@@ -814,20 +816,16 @@ void* MPW_Relay(void* args)
       }
       tmp = client[channel2]->irecv(buf2+n2,min(bufsize-n2,relay_rsize));
       n2 += tmp;
-      #if PERF_REPORT == 4
-      cout << "Retrieved from 2: " << n2 << endl;
-      #endif
+      LOG_TRACE("Retrieved from 2: " << n2);
     }
     // ...forward to channel 1. 
     if(mode/2 == 1 && n2 > 0) {
       tmp = client[channel]->isend(buf2+ns2,min(n2-ns2,relay_ssize));
       ns2 += tmp;
-      #if PERF_REPORT == 4
-      cout << "Sent to 1: " << ns2 << endl;
-      #endif
+      LOG_TRACE("Sent to 1: " << ns2);
     }
     
-    #if PacingMode == 1
+    #if MPW_PacingMode == 1
     usleep(pacing_sleeptime);
     #endif
   }
@@ -985,7 +983,7 @@ void *MPW_TDynEx(void *args)
         }
       }
     }
-    #if PacingMode == 1
+    #if MPW_PacingMode == 1
     usleep(pacing_sleeptime);
     #endif
   }
@@ -1036,24 +1034,24 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
   long long int dyn_recvsize = 0;
 
   for(int i=0; i<num_channels; i++){
-      ta[channel[i]].sendsize = totalsendsize;
-      ta[channel[i]].recvsize = maxrecvsize;
+      ta[channel[i]]->sendsize = totalsendsize;
+      ta[channel[i]]->recvsize = maxrecvsize;
     
       // NOTE: after this function ends, this will be a dangling pointer
-      ta[channel[i]].dyn_recvsize = &dyn_recvsize; //one recvsize stored centrally. Read in by thread 0.
+      ta[channel[i]]->dyn_recvsize = &dyn_recvsize; //one recvsize stored centrally. Read in by thread 0.
     
-      ta[channel[i]].channel = channel[i];
-      ta[channel[i]].sendbuf = sendbuf[i];
-      ta[channel[i]].recvbuf = recvbuf;
-      ta[channel[i]].thread_id = i;
-      ta[channel[i]].numchannels = num_channels;
-      ta[channel[i]].numrchannels = num_channels;
+      ta[channel[i]]->channel = channel[i];
+      ta[channel[i]]->sendbuf = sendbuf[i];
+      ta[channel[i]]->recvbuf = recvbuf;
+      ta[channel[i]]->thread_id = i;
+      ta[channel[i]]->numchannels = num_channels;
+      ta[channel[i]]->numrchannels = num_channels;
       if(i>0) {
-        int code = pthread_create(&streams[i], NULL, MPW_TDynEx, &ta[channel[i]]);
+        int code = pthread_create(&streams[i], NULL, MPW_TDynEx, ta[channel[i]]);
       }
   }
 
-  MPW_TDynEx(&ta[channel[0]]);
+  MPW_TDynEx(ta[channel[0]]);
 
   for(int i=1; i<num_channels; i++) {
     pthread_join(streams[i], NULL);
@@ -1062,7 +1060,7 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
 #ifdef PERF_TIMING
   t = GetTime() - t;
   
-  #if PERF_REPORT>0
+  #if LOG_LVL >= LOG_INFO
   long long int total_size = totalsendsize + dyn_recvsize;
 
   cout << "DSendRecv: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
@@ -1071,7 +1069,7 @@ long long int DSendRecv(char** sendbuf, long long int totalsendsize, char* recvb
   SendRecvTime += t;
 #endif
 
-  return ta[channel[0]].dyn_recvsize[0];
+  return ta[channel[0]]->dyn_recvsize[0];
 
 }
 
@@ -1128,76 +1126,78 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
   long long int recv_offset = 0; //only if !dynamic
 
   //TODO: Add support for different number of send/recv streams.
-  for(int i=0; i<max(nc_send,nc_recv); i++){
-
+  for (int i = 0; i < max(nc_send,nc_recv); i++)
+  {
+    thread_tmp &props = *ta[i];
+    
     if(totalsendsize>0 && i<nc_send) {
       if(dynamic) { //overall sendsize given to all threads.
-        ta[i].sendsize = totalsendsize;
+        props.sendsize = totalsendsize;
       } else { //1 sendsize separately for each thread.
-        ta[i].sendsize = totalsendsize / nc_send;
+        props.sendsize = totalsendsize / nc_send;
         if(i < (totalsendsize % nc_send)) {
-          ta[i].sendsize++;
+          props.sendsize++;
         }
       }
-      ta[i].sendbuf = sendbuf2[i];
+      props.sendbuf = sendbuf2[i];
     }
     else {
-      ta[i].sendsize = 1*nc_send;
-      ta[i].sendbuf = dummy_send[i];
+      props.sendsize = 1*nc_send;
+      props.sendbuf = dummy_send[i];
     }
 
     if(maxrecvsize2>0 && i<nc_recv) {
       if(dynamic) { //one recvbuf and size limit for all threads.
-        ta[i].recvsize = maxrecvsize2;
-        ta[i].recvbuf = recvbuf2;
+        props.recvsize = maxrecvsize2;
+        props.recvbuf = recvbuf2;
       } else { //assign separate and fixed-size recv bufs for each thread.
-        ta[i].recvbuf = &(recvbuf2[recv_offset]);
-        ta[i].recvsize = maxrecvsize2 / nc_recv;
-        if(i<(maxrecvsize2 % nc_recv)) { ta[i].recvsize++; }
-        recv_offset += ta[i].recvsize;
+        props.recvbuf = &(recvbuf2[recv_offset]);
+        props.recvsize = maxrecvsize2 / nc_recv;
+        if(i<(maxrecvsize2 % nc_recv)) { props.recvsize++; }
+        recv_offset += props.recvsize;
       }
     }
     else {
-      ta[i].recvsize = 1*nc_recv;
-      ta[i].recvbuf = dummy_recv;
+      props.recvsize = 1*nc_recv;
+      props.recvbuf = dummy_recv;
     }
 
-    ta[i].dyn_recvsize = &dyn_recvsize_sendchannel; //one recvsize stored centrally. Read in by thread 0.
-    ta[i].channel = 0;
+    props.dyn_recvsize = &dyn_recvsize_sendchannel; //one recvsize stored centrally. Read in by thread 0.
+    props.channel = 0;
     if(i<nc_send) {
-      ta[i].channel = ch_send[i]; 
+      props.channel = ch_send[i]; 
     }
     if(i<nc_recv) {
       if(i<nc_send) {
-        ta[i].channel += ((ch_recv[i]+1)*65536);
+        props.channel += ((ch_recv[i]+1)*65536);
       }
       else {
-        ta[i].channel = ch_recv[i];
+        props.channel = ch_recv[i];
       }
     }
 
-    ta[i].thread_id = i;
-    ta[i].numchannels  = nc_send;
-    ta[i].numrchannels = nc_recv;
+    props.thread_id = i;
+    props.numchannels  = nc_send;
+    props.numrchannels = nc_recv;
     //printThreadTmp(ta[i]);
     if(i>0) {
       if(dynamic) {
-        int code = pthread_create(&streams[i], NULL, MPW_TDynEx, &ta[i]);
+        int code = pthread_create(&streams[i], NULL, MPW_TDynEx, ta[i]);
       } else {
-        int code = pthread_create(&streams[i], NULL, MPW_TSendRecv, &ta[i]);
+        int code = pthread_create(&streams[i], NULL, MPW_TSendRecv, ta[i]);
       }
     }
   }
 
   if(dynamic) {
-    MPW_TDynEx(&ta[0]);
+    MPW_TDynEx(ta[0]);
     if(max(nc_send,nc_recv)>1) {
       for(int i=1; i<max(nc_send,nc_recv); i++) {
         pthread_join(streams[i], NULL);
       }
     }
   } else {
-    int* res = (int *)MPW_TSendRecv(&ta[0]);
+    int* res = (int *)MPW_TSendRecv(ta[0]);
     // TODO: error checking on MPW_TSendRecv
     delete res;
 
@@ -1212,17 +1212,17 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
 
 
   #ifdef PERF_TIMING
-  t = GetTime() - t;
+    t = GetTime() - t;
 
-    #if PERF_REPORT>0
-      long long int total_size = sendsize2 + (ta[0].dyn_recvsize)[0];
+    #if LOG_LVL >= LOG_INFO
+      long long int total_size = sendsize2 + (ta[0]->dyn_recvsize)[0];
       cout << "Cycle: " << t << "s. Size: " << (total_size/(1024*1024)) << "MB. Rate: " << total_size/(t*1024*1024) << "MB/s." << endl;
     #endif
     SendRecvTime += t;
   #endif
 
 //  return dyn_recvsize_recvchannel;
-  return (ta[0].dyn_recvsize)[0];
+  return (ta[0]->dyn_recvsize)[0];
 }
 
 /* Recv from one set of channels. Send through to another set of channels. */
@@ -1288,18 +1288,16 @@ int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long 
 
   void *(*sendrecvFunc)(void *);
   
-  for(int i=0; i<num_channels; i++){
+  for(int i = 0; i < num_channels; i++){
     const int stream = channel[i];
 
-    ta[stream].channel = stream;
-
     if (recvsize[i]) {
-      ta[stream].recvbuf = recvbuf[i];
-      ta[stream].recvsize = recvsize[i];
+      ta[stream]->recvbuf = recvbuf[i];
+      ta[stream]->recvsize = recvsize[i];
     }
     if (sendsize[i]) {
-      ta[stream].sendsize = sendsize[i];
-      ta[stream].sendbuf = sendbuf[i];
+      ta[stream]->sendsize = sendsize[i];
+      ta[stream]->sendbuf = sendbuf[i];
     }
     
     if (sendsize[i] && recvsize[i])
@@ -1310,18 +1308,18 @@ int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long 
       sendrecvFunc = &MPW_TRecv;
     
     if(i>0) {
-      int code = pthread_create(&streams[i], NULL, sendrecvFunc, &ta[stream]);
+      int code = pthread_create(&streams[i], NULL, sendrecvFunc, ta[stream]);
     }
   }
   
   int return_value = 0;
-  int *res = (int *)sendrecvFunc(&ta[channel[0]]);
+  int *res = (int *)sendrecvFunc(ta[channel[0]]);
   if (*res < 0)
     return_value = *res;
   delete res;
 
-  if(num_channels>1) {
-    for(int i=1; i<num_channels; i++) {
+  if(num_channels > 1) {
+    for(int i = 1; i < num_channels; i++) {
       pthread_join(streams[i], (void **)&res);
       if (*res < 0)
         return_value = *res;
@@ -1332,7 +1330,7 @@ int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long 
   #ifdef PERF_TIMING
     t = GetTime() - t;
 
-    #if PERF_REPORT>0
+    #if LOG_LVL >= LOG_INFO
       long long int total_size = 0;
       for(int i=0;i<num_channels;i++) {
         total_size += sendsize[i]+recvsize[i];
@@ -1354,7 +1352,7 @@ int MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long lon
 #endif
 
 #if OptimizeStreamCount == 1
-  nc = max(1, min(nc, max(sendsize, recvsize)/2048) ); // nc = total_size [kb] / 2.
+  nc = max(1, min(nc, max(sendsize, recvsize)/BytesPerStream) );
 #endif
 
   size_t sendsize_each = size_t(sendsize / nc);

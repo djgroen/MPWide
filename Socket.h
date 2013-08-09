@@ -19,8 +19,8 @@
  * along with MPWide.  If not, see <http://www.gnu.org/licenses/>.
  * **************************************************************/
 
-#ifndef Socket_class
-#define Socket_class
+#ifndef MPW_Socket_class
+#define MPW_Socket_class
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -65,7 +65,8 @@ class Socket
   int select_me (int mask, int timeout_val) const;
   int select_me (int mask, int timeout_s, int timeout_u) const;
 
-  void set_non_blocking ( const bool );
+  void set_non_blocking(bool);
+  void set_no_delay(bool);
   void setWin(int size);
 
   bool is_valid() const { return m_sock != -1; }
@@ -76,7 +77,6 @@ class Socket
 
  private:
   int m_sock;
-  int *refs;
   sockaddr_in m_addr;
   #ifdef MSG_NOSIGNAL
     static const int tcp_send_flag = MSG_NOSIGNAL;
