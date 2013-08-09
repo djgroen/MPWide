@@ -22,7 +22,7 @@ wcp_objects =  mpw-cp.o
 SO_EXT = so
 SHARED_LINK_FLAGS = -shared
 
-all : MPWTest MPWTestConcurrent MPWTestRestart MPWDataGather MPWForwarder MPWFileCopy libMPW.a libMPW.$(SO_EXT)
+all : MPWTest MPWTestConcurrent MPWDataGather MPWForwarder MPWFileCopy libMPW.a libMPW.$(SO_EXT)
 
 install: libMPW.a libMPW.$(SO_EXT) MPWForwarder
 	mkdir -p $(INSTALL_PREFIX)/lib
@@ -51,9 +51,6 @@ MPWTestConcurrent: $(TestConcurrent_objects) libMPW.a
 MPWAmuseAgent: $(Amuse_objects) libMPW.a
 	$(LINK_EXE)
 
-MPWTestRestart: $(TestRestart_objects) libMPW.a
-	$(LINK_EXE)
-
 MPWForwarder: $(fw_objects) libMPW.a
 	$(LINK_EXE)
 
@@ -65,8 +62,7 @@ MPWFileCopy: $(wcp_objects) libMPW.a
 
 Test: Test.cpp
 TestConcurrent: TestConcurrent.cpp
-TestRestart: TestRestart.cpp
 Forwarder: Forwarder.cpp
 
 clean:
-	rm -f *.o MPWTest MPWTestConcurrent MPWTestRestart MPWDataGather MPWForwarder MPWAmuseAgent MPWFileCopy libMPW.a libMPW.$(SO_EXT)* bin lib include mpw-cp
+	rm -f *.o MPWTest MPWTestConcurrent MPWDataGather MPWForwarder MPWAmuseAgent MPWFileCopy libMPW.a libMPW.$(SO_EXT)* bin lib include mpw-cp
