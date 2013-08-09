@@ -5,7 +5,7 @@ MPWide is a communication library for message passing across wide area networks.
 
 ------------------
 MPWide README
-version 1.5.1, last modified on June 8th 2013
+version 1.8, last modified on August 9th 2013
 ------------------
 
 This is a README for the MPWide communication library, which has been written by Derek Groen.
@@ -15,6 +15,7 @@ feel free to contact me at:
 djgroennl@gmail.com
 
 More information on MPWide can be found at:
+  https://github.com/djgroen/MPWide
   http://castle.strw.leidenuniv.nl/software/mpwide.html
 
 The MPWide paper can be found at:
@@ -23,15 +24,18 @@ The MPWide paper can be found at:
 Main extensions of this version over the one described in the paper are:
 - Support for simplified 'path' data structure (where a path is a connection
   consisting of one or more streams).
-- Preliminary Python interface.
-- recognition of host names (basic DNS resolution).
-- addition of packet pacing.
-- introduction of mpw-cp file copying client.
+- Python interfaces, possible with SWIG and Cython (prototype version).
+- Recognition of host names (basic DNS resolution).
+- Addition of packet pacing.
+- Introduction of mpw-cp file copying client.
 - 1 second fixed socket timeout when establishing connections to improve
   reliability.
+- Improved thread-safety and performance.
+- Several new function calls, which allow MPWide to be integrated into server/client 
+  based environments.
 
 Open issues:
-- Using paths gives a very slight performance disadvantage at the moment.
+- See the github page for a list of open issues.
 
 ------------------
 REQUIRED SOFTWARE:
@@ -93,8 +97,8 @@ POSSIBLE SOLUTION 1: Run mpw-cp on the other end-point node.
 API REFERENCE
 ------------------
 A reference of the programming interface can be found in MPWide.h. Different
-versions of MPWide 1.x will have compatible APIs (and MPWide2 will almost
-certainly be backwards compatible by the time that comes out).
+versions of MPWide 1.x are intended to support the API defined in the paper 
+(and often a little more).
 
 ------------------
 TEST SYNTAX:
@@ -146,6 +150,13 @@ purposes we recommend using mpw-cp instead.
 ------------------
 Recent Updates
 ------------------
+
+* August 9th 2013,
+-- Improved thread-safety of MPWide.
+-- Improved performance.
+-- Improved error reporting and logging infrastructure.
+-- Added several functions to allow MPWide to be used in a non-blocking manner.
+-- Added several functions to make it easier for MPWide to be used in a larger client/server environment.
 
 * June 8th 2013,
 -- Added MPW_SetPathWin().
