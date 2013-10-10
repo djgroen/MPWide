@@ -1,0 +1,13 @@
+------------------
+REQUIRED SOFTWARE:
+------------------
+A C++ compiler.
+Access to the C sockets API.
+
+------------------
+INSTALLATION:
+------------------
+1. compile by typing 'make'
+
+This will build the core MPWide library, the unit tests, as well as several functional tests.
+
