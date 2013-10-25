@@ -44,12 +44,12 @@
 #define LVL_TRACE 6
 
 // SET THE LOG LEVEL
-#define LOG_LVL LVL_ERR
+#define LOG_LVL LVL_WARN
 
 #if LOG_LVL > LVL_NONE
 #include <pthread.h>
 static pthread_mutex_t __log_mutex__ = PTHREAD_MUTEX_INITIALIZER;
-#define DO_LOG_(MSG) { pthread_mutex_lock(&__log_mutex__); cout << MSG << endl; pthread_mutex_unlock(&__log_mutex__); }
+#define DO_LOG_(MSG) { pthread_mutex_lock(&__log_mutex__); std::cout << MSG << std::endl; pthread_mutex_unlock(&__log_mutex__); }
 #endif
 
 #if LOG_LVL >= LVL_ERR

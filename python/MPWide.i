@@ -2,8 +2,6 @@
 
 %ignore MPW_Init(string*, int*, int*, int);
 %ignore MPW_Init(string, int);
-%ignore MPW_Init(string);
-%ignore MPW_Init();
 
 %ignore MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int channel); 
 

@@ -3,7 +3,9 @@ import time
 import argparse
 
 # load the shared object
-import MPWide
+#import MPWide
+import ctypes
+MPWide = ctypes.cdll.LoadLibrary("../libMPW.so")
 
 """
  MPWide Test script (direct port from Test.cpp).
@@ -41,33 +43,18 @@ winsize = 16*1024*1024
 if len(sys.argv)>5:
     winsize = int(sys.argv[5])
   
-hosts = []
-sports = []   
-
-for i in xrange(0,size):
-    hosts.append(host)
-    sports.append(16256+i)
-
-MPWide.MPW_Init(hosts,sports,size);
+path_id = MPWide.MPW_CreatePath(host,16256,size);
 
 msglen = bufsize*1024 
 
 msg  = "a" * msglen #string 
 msg2 = "b" * msglen #string)
 
-channels = []
-
-for i in xrange(0,size):
-    channels.append(i)
-    MPWide.setWin(i,winsize)
-
-
 # test loop 
 for i in xrange(0,100):
-    MPWide.MPW_SendRecv(msg,msglen,msg2,msglen,channels,size)
+    MPWide.MPW_SendRecv(msg,msglen,msg2,msglen,path_id)
     time.sleep(1);
     print "End of iteration ", i, "."
   
-
-MPWide.MPW_Finalize()
+MPWide.MPW_DestroyPath(path_id)
 

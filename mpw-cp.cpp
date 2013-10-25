@@ -163,7 +163,7 @@ int main(int argc, char** argv){
     size = atoi(argv[4]);
   }
 
-  string *hosts = new string[size]; // = {host,host,host,host,host,host,host,host};
+/*  string *hosts = new string[size]; // = {host,host,host,host,host,host,host,host};
   int sports[size];    // = {6000,6001,6002,6003,6004,6005,6006,6007};
   int cports[size];
   int channel[size];
@@ -173,25 +173,27 @@ int main(int argc, char** argv){
     sports[i] = baseport+i;
     cports[i] = baseport+size+i;
     channel[i] = i;
-  }
+  }*/
 
-  //  MPW_Init(hosts,sports,cports,flags,size);
+//  cout << "s:" << sports[0] << ", c:" << cports[0] << ", endpoint: " << hosts[0] << endl;
 
-  cout << "s:" << sports[0] << ", c:" << cports[0] << ", endpoint: " << hosts[0] << endl;
+  int path_id = 0;
 
 #if CLIENT_BINDING > 0
-  MPW_Init(hosts,sports,cports,size);
+  path_id = MPW_CreatePath(host, baseport, size);
+  //MPW_Init(hosts,sports,cports,size);
 #else
-  MPW_Init(hosts,sports,size);
+  path_id = MPW_CreatePath(host, baseport, size);
+  //MPW_Init(hosts,sports,size);
 #endif
-
-  delete [] hosts;
 
   if(argc>6) {
     long long int pr  = atoi(argv[5]) * 1024*1024;
     long long int win = atoi(argv[6]) * 1024;
     reconfig(size,pr,win);
   }
+
+  cout << "FLAG = " << flag << endl;
 
   if(flag) { //client mode
     //while(true) {
@@ -204,7 +206,7 @@ int main(int argc, char** argv){
 
       status = stat (local_dir, &st_buf);
       if (status != 0) {
-        printf ("Error, errno = %d\n", errno);
+        printf ("Error, local file or directory not accessible. Errno = %d\n", errno);
         return 1;
       }
 
@@ -228,7 +230,7 @@ int main(int argc, char** argv){
     a[0] = filelist.size();
 
     int *ch = {0};
-    MPW_Send((char*) a,4,ch,1);
+    MPW_Send((char*) a, 4, path_id);
 
 
     while(filelist.size()) {
@@ -260,11 +262,12 @@ int main(int argc, char** argv){
         strcpy(fn,filelist.at(0).c_str());
       }
 
-      MPW_Send(fn,256,ch,1);
-      MPW_Send((char*) &nfsize,4,ch,1);
+      MPW_Send(fn, 256, path_id);
+      MPW_Send((char*) &nfsize, 4, path_id);
       cout << "Starting main loop."<< endl;
 
       for(long i = 0; i<fsize;i+=buffer_size) {
+        cout << i << " bytes sent." << endl;
 
         long read_len = min(fsize-i,buffer_size);
         long bytes_read = fread(buf,1,read_len,f);
@@ -272,9 +275,9 @@ int main(int argc, char** argv){
           cout << "Read error: Number of bytes read does not match expected amount." << endl;
           cout << "Read: " << bytes_read << " bytes. Expected: " << read_len << endl;
         }
-//        MPW_Send(buf,read_len,0);
+//        MPW_Send(buf,read_len, path_id);
         char dummysend[100];
-	MPW_SendRecv(buf, read_len, dummysend, 100, channel, size);
+        MPW_SendRecv(buf, read_len, dummysend, 100, path_id);
 
       }
 
@@ -286,18 +289,19 @@ int main(int argc, char** argv){
     }
   }
   else { //server mode
-    int *ch = {0};
+    cout << "Server." << endl;
 
     int listsize = 0;
-    MPW_Recv((char*)(&listsize),4,ch,1);
+    MPW_Recv((char*)(&listsize), 4, path_id);
 
-    printf("no. of files = %d \n",listsize);
+    cout << "no. of files = " << listsize << endl;
 
     while(listsize) {
       //cout << "Server." << endl;
 
       char fname_temp[256]; 
-      char fname[256];
+      char* fname;
+      char dir_fname[256];
 
       uint32_t rs_n = 0;
 
@@ -305,10 +309,15 @@ int main(int argc, char** argv){
 
       //cout << "Receiving file header info." << endl;
 
-      MPW_Recv(fname_temp,256,ch,1);
-      MPW_Recv((char*) &rs_n,4,ch,1);
+      MPW_Recv(fname_temp, 256, path_id);
+      MPW_Recv((char*) &rs_n, 4, path_id);
 
-      sprintf(fname,"%s/%s",local_dir,fname_temp);
+      fname = argv[3];
+      if(fname[strlen(fname)-1] == '/')
+      {
+        fname = dir_fname;
+        sprintf(fname,"%s/%s",local_dir,fname_temp);
+      }
 
       cout << "Receiving file: " << fname << endl;
 
@@ -324,15 +333,14 @@ int main(int argc, char** argv){
 
       for(long i = 0; i<recvsize; i += buffer_size) {
 
-	long read_len = min(recvsize-i,buffer_size);
+      long read_len = min(recvsize-i,buffer_size);
 
-	//cout << "read_len = " << read_len << endl;
+      //cout << "read_len = " << read_len << endl;
+      //MPW_Recv(buf,read_len,0);
 
-	//	MPW_Recv(buf,read_len,0);
-
-        MPW_SendRecv( dummysend, 100, buf, read_len, channel, size);
-
-	long bytes_written = fwrite(buf,1,read_len,f);
+        MPW_SendRecv( dummysend, 100, buf, read_len, path_id);
+        
+        long bytes_written = fwrite(buf,1,read_len,f);
       }
       listsize--;
 

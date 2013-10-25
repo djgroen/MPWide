@@ -29,7 +29,12 @@
 
 using namespace std;
 
-#include "MPWide.h"
+#include "../MPWide.h"
+
+/*
+  Test.cpp
+  A comprehensive benchmarking tool for testing MPWide between multiple sites.
+*/
 
 int main(int argc, char** argv){
 
@@ -37,101 +42,79 @@ int main(int argc, char** argv){
   int size = 1;
 
   if(argc==1) {
-    printf("usage: ./MPWTest <ip address of other endpoint> <channels (default: 1)> <buffer [kB] (default: 8 kB))> <act_as_server (default: 1)> \n All parameters after the first are optional.\n");
+    printf("usage: ./MPWTest <act_as_server> <hostname or ip address of other endpoint> <streams (default: 1)> <buffer [kB] (default: 8 kB))> \n All parameters after the second are optional.\n");
     exit(0);
   }
 
-  string host = (string) argv[1];
+  string host = (string) argv[2];
 
-  if(argc>2) {
-    size = atoi(argv[2]);
+  if(argc>3) {
+    size = atoi(argv[3]);
   }
 
   int bufsize = 8*1024;
-  if(argc>3) {
-    bufsize = atoi(argv[3]);
+  if(argc>4) {
+    bufsize = atoi(argv[4]);
   }
 
-
+/* Optional functionality which disables autotuning and allows users to specify a software-based packet pacing rate. */
 //  if(argc>4) {
 //    MPW_setAutoTuning(false);
 //    MPW_setPacingRate((atoi(argv[4]))*1024*1024);
 //  }
-  int is_server = 1;
-  if (argc>4) {
-      is_server = atoi(argv[4]);
-  }
+
+  int is_server = atoi(argv[1]);
 
   int winsize = 16*1024*1024;
-//  if(argc>5) {
-//    winsize = atoi(argv[5]);
-//  }
 
-//  string *hosts = new string[size];
-//  int sports[size];   
+  /* Create a path in MPWide, but do not yet connect it. */
+  int path_id = MPW_CreatePathWithoutConnect(host, 16256, size); 
 
-//  for(int i=0; i<size; i++) {
-//    hosts[i] = host;
-//    sports[i] = 16256+i;
-//  }
-
-  int path_id = MPW_CreatePathWithoutConnect(host, 16256, size); ///path version
+  /* Server process should be started first, it will try to connect, fail and then start listening for an incoming connection. */
   if(is_server == 1) {
     int status  = MPW_ConnectPath(path_id, true);
   }
+  /* Client process should be started second. It will try to connect to the server, and exit if it fails. */
   else {
     int status  = MPW_ConnectPath(path_id, false);
     if (status == -1) {
         MPW_DestroyPath(path_id);
+        cout << "MPWTest client program cannot connect to the server. Perhaps you entered a wrong hostname of the machine to connect to, or perhaps the firewall on the server node is blocking incoming traffic?" << endl;
         exit(1);
     }
   }
-//  MPW_Init(hosts, sports, size); ///non-path version.
-//  delete [] hosts;
   cerr << "\nSmall test completed, now commencing large test.\n" << endl;
 
-
+  /* Creating message buffers for the performance tests. */
   long long int len = bufsize*1024; 
-
   char* msg  = (char*) malloc(len);
   char* msg2 = (char*) malloc(len);
 
-  int channels[size];
-
   for(int i=0; i<size; i++) {
-    channels[i] = i;
     MPW_setWin(i,winsize);
   }
 
-  int comm_mode = 0; //0 for regular sendrecv tests, 1 for non-blocking sendrecv tests.
-
-  /* test loop */
+  /* Main loop for the performance tests */
   for(int i=0; i<20; i++) {
 
-//    MPW_SendRecv(msg,len,msg2,len,channels,size); ///non-path version.
-    if(comm_mode==0) {
-      //MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
-      if(is_server == 0) {
-        MPW_SendRecv((char *)0,0,msg,len,path_id);
-        MPW_SendRecv(msg,len,(char *)0,0,path_id);
-      }
-      else {
-        MPW_SendRecv(msg,len,(char *)0,0,path_id);
-        MPW_SendRecv((char *)0,0,msg,len,path_id);
-      }
-    }
-    else if(comm_mode == 1) {
-      int id = MPW_ISendRecv(msg,len,msg2,len,path_id);
+    /* Below are two examples of how to facilitate a two-way message exchange. 
+     * These commands are identical for the server and client program. */
+    // MPW_SendRecv(msg,len,msg2,len,channels,size); ///non-path version.
+    // MPW_SendRecv(msg,len,msg2,len,path_id); ///path version
 
-      sleep(1);
-    
-      cout << "Has the non-blocking comm finished?" << endl;
-      MPW_Has_NBE_Finished(id);
-      cout << "Doing something else..." << endl;
-    
-      MPW_Wait(id);
+    /* But here the server first receives and then sends a message. */
+    if(is_server == 1) {
+      MPW_SendRecv(0,0,msg,len,path_id);
+      MPW_SendRecv(msg,len,0,0,path_id);
+    }
+    /* While the client first sends and then receives a message. */
+    else {
+      MPW_SendRecv(msg,len,0,0,path_id);
+      MPW_SendRecv(0,0,msg,len,path_id);
     }
     
+    /* We sleep for a second to prevent any interference on the line due to 
+     * asynchronicity of the performance tests. */
     sleep(1);
     cout << "End of iteration " << i << "." << endl;
   }
@@ -140,6 +123,10 @@ int main(int argc, char** argv){
   free(msg2);
 
   MPW_Finalize();
+
+  /* If the test doesn't crash or hang and this line is printed on both client and 
+     server machine, we can consider it as a success. */
+  cout << "MPWTest is done." << endl;
 
   return 1;
 }

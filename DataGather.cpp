@@ -252,18 +252,14 @@ int main(int argc, char** argv){
 
       for(long i = 0; i<recvsize; i += buffer_size) {
 
-	long read_len = min(recvsize-i,buffer_size);
+        long read_len = min(recvsize-i,buffer_size);
 
-	//cout << "read_len = " << read_len << endl;
-
-	//	MPW_Recv(buf,read_len,0);
-
-	long long int sendsize = 100;
+        long long int sendsize = 100;
         char *dummysend = new char[sendsize];
         MPW_SendRecv( dummysend, sendsize, buf, read_len, channel, size);
         delete [] dummysend;
 
-	long bytes_written = fwrite(buf,1,read_len,f);
+        long bytes_written = fwrite(buf,1,read_len,f);
       }
 
       free(buf);

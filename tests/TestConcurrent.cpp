@@ -32,7 +32,13 @@
 
 using namespace std;
 
-#include "MPWide.h"
+#include "../MPWide.h"
+
+/*
+  TestConcurrent.cpp
+  A comprehensive test of socket connects and MPW_SendRecv using one process with two threads.
+*/
+
 
 pthread_mutex_t log_mutex;
 pthread_mutex_t path_mutex;
@@ -87,12 +93,12 @@ void *connecting_thread(void *data)
   // Try to connect until you succeed
   int path_id = do_connect("localhost", 16256, num_channels, false);
   while (path_id < 0) {
-    // Sleep 0.2 seconds
-    usleep(200000);
+    // Sleep 1.0 seconds
+    usleep(1000000);
     path_id = do_connect("localhost", 16256, num_channels, false);
   }
 
-  usleep(200000);
+  usleep(1000000);
   if (path_id >= 0) {
     LOG("Succesfully connected to server");
     if (((vars *)data)->do_send) {
@@ -130,7 +136,9 @@ void *communicating_thread(void *data)
   memset(buf, 0, msg_size);
   int res;
   
-  for (int i = 0; i < 20; i++) {
+  LOG("Starting Blocking Communication Tests.");
+
+  for (int i = 0; i < 10; i++) {
     if (do_send) {
       LOG("Starting iteration " << i << " of sending thread; path " << path_id);
       res = -MPW_SendRecv(buf, msg_size, 0, 0, path_id);
@@ -142,7 +150,33 @@ void *communicating_thread(void *data)
     }
   }
   
+  LOG("Starting Non-Blocking Communication Tests.");
+  for (int i = 0; i < 10; i++) {
+    if (do_send) {
+      int id = MPW_ISendRecv(buf, msg_size, 0, 0, path_id);
+  
+      sleep(1);
+
+      cout << "Has the non-blocking comm finished?" << endl;
+      MPW_Has_NBE_Finished(id);
+      cout << "Doing something else..." << endl;
+
+      MPW_Wait(id);
+    } else {
+      int id = MPW_ISendRecv(0, 0, buf, msg_size, path_id);
+
+      sleep(1);
+  
+      cout << "Has the non-blocking comm finished?" << endl;
+      MPW_Has_NBE_Finished(id);
+      cout << "Doing something else..." << endl;
+
+      MPW_Wait(id);
+    }
+  }
   delete [] buf;
+
+  cout << "MPWTestConcurrent completed successfully." << endl;
   
   return NULL;
 }
@@ -151,14 +185,11 @@ int main(int argc, char** argv){
   pthread_mutex_init(&path_mutex, NULL);
   pthread_mutex_init(&log_mutex, NULL);
 
-  
-  if(argc==1) {
-    printf("usage: ./MPWConcurrentTest <channels (default: 1)> [<message size [kB] (default: 8 kB))>]\n");
-    exit(EXIT_FAILURE);
-  }
+  //  printf("usage: ./MPWConcurrentTest <channels (default: 1)> [<message size [kB] (default: 8 kB))>]\n");
+  //  exit(EXIT_FAILURE);
 
   /* Initialize */
-  int num_channels = atoi(argv[1]);
+  int num_channels = (argc>1) ? atoi(argv[1]) : 1;
   size_t msgsize = (argc>2) ? atoi(argv[2])*1024 : 8*1024;
 
   vars v = {num_channels, msgsize, true};

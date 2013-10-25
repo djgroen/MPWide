@@ -2686,7 +2686,7 @@ SWIG_Python_MustGetPtr(PyObject *obj, swig_type_info *ty, int argnum, int flags)
 #define SWIGTYPE_p_int swig_types[1]
 #define SWIGTYPE_p_long_long swig_types[2]
 #define SWIGTYPE_p_p_char swig_types[3]
-#define SWIGTYPE_p_string swig_types[4]
+#define SWIGTYPE_p_std__string swig_types[4]
 static swig_type_info *swig_types[6];
 static swig_module_info swig_module = {swig_types, 5, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
@@ -3045,6 +3045,13 @@ SWIG_AsVal_bool (PyObject *obj, bool *val)
 }
 
 
+SWIGINTERNINLINE PyObject*
+  SWIG_From_bool  (bool value)
+{
+  return PyBool_FromLong(value ? 1 : 0);
+}
+
+
 #include <limits.h>
 #if !defined(SWIG_NO_LLONG_MAX)
 # if !defined(LLONG_MAX) && defined(__GNUC__) && defined (__LONG_LONG_MAX__)
@@ -3124,7 +3131,7 @@ SWIG_From_long_SS_long  (long long value)
 #ifdef __cplusplus
 extern "C" {
 #endif
-SWIGINTERN PyObject *_wrap_MPW_DNSResolve(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MPW_DNSResolve__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   char *arg1 = (char *) 0 ;
   int res1 ;
@@ -3149,6 +3156,72 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_MPW_DNSResolve__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string arg1 ;
+  void *argp1 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  char *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:MPW_DNSResolve",&obj0)) SWIG_fail;
+  {
+    res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__string,  0  | 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_DNSResolve" "', argument " "1"" of type '" "std::string""'"); 
+    }  
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MPW_DNSResolve" "', argument " "1"" of type '" "std::string""'");
+    } else {
+      std::string * temp = reinterpret_cast< std::string * >(argp1);
+      arg1 = *temp;
+      if (SWIG_IsNewObj(res1)) delete temp;
+    }
+  }
+  result = (char *)MPW_DNSResolve(arg1);
+  resultobj = SWIG_FromCharPtr((const char *)result);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_DNSResolve(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[2];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 1); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__string, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_MPW_DNSResolve__SWIG_1(self, args);
+    }
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_AsCharPtrAndSize(argv[0], 0, NULL, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_MPW_DNSResolve__SWIG_0(self, args);
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'MPW_DNSResolve'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    MPW_DNSResolve(char *)\n"
+    "    MPW_DNSResolve(std::string)\n");
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_MPW_setAutoTuning(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   bool arg1 ;
@@ -3164,6 +3237,19 @@ SWIGINTERN PyObject *_wrap_MPW_setAutoTuning(PyObject *SWIGUNUSEDPARM(self), PyO
   arg1 = static_cast< bool >(val1);
   MPW_setAutoTuning(arg1);
   resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_AutoTuning(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)":MPW_AutoTuning")) SWIG_fail;
+  result = (bool)MPW_AutoTuning();
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
   return resultobj;
 fail:
   return NULL;
@@ -3195,9 +3281,88 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_MPW_CreatePathWithoutConnect(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string arg1 ;
+  int arg2 ;
+  int arg3 ;
+  void *argp1 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_CreatePathWithoutConnect",&obj0,&obj1,&obj2)) SWIG_fail;
+  {
+    res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__string,  0  | 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_CreatePathWithoutConnect" "', argument " "1"" of type '" "std::string""'"); 
+    }  
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MPW_CreatePathWithoutConnect" "', argument " "1"" of type '" "std::string""'");
+    } else {
+      std::string * temp = reinterpret_cast< std::string * >(argp1);
+      arg1 = *temp;
+      if (SWIG_IsNewObj(res1)) delete temp;
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_CreatePathWithoutConnect" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  ecode3 = SWIG_AsVal_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "MPW_CreatePathWithoutConnect" "', argument " "3"" of type '" "int""'");
+  } 
+  arg3 = static_cast< int >(val3);
+  result = (int)MPW_CreatePathWithoutConnect(arg1,arg2,arg3);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_ConnectPath(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  bool arg2 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:MPW_ConnectPath",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "MPW_ConnectPath" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_ConnectPath" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  result = (int)MPW_ConnectPath(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_MPW_CreatePath(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
-  string arg1 ;
+  std::string arg1 ;
   int arg2 ;
   int arg3 ;
   void *argp1 ;
@@ -3213,14 +3378,14 @@ SWIGINTERN PyObject *_wrap_MPW_CreatePath(PyObject *SWIGUNUSEDPARM(self), PyObje
   
   if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_CreatePath",&obj0,&obj1,&obj2)) SWIG_fail;
   {
-    res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_string,  0  | 0);
+    res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__string,  0  | 0);
     if (!SWIG_IsOK(res1)) {
-      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_CreatePath" "', argument " "1"" of type '" "string""'"); 
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_CreatePath" "', argument " "1"" of type '" "std::string""'"); 
     }  
     if (!argp1) {
-      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MPW_CreatePath" "', argument " "1"" of type '" "string""'");
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MPW_CreatePath" "', argument " "1"" of type '" "std::string""'");
     } else {
-      string * temp = reinterpret_cast< string * >(argp1);
+      std::string * temp = reinterpret_cast< std::string * >(argp1);
       arg1 = *temp;
       if (SWIG_IsNewObj(res1)) delete temp;
     }
@@ -3280,6 +3445,7 @@ SWIGINTERN PyObject *_wrap_MPW_Send__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
+  int result;
   
   if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_Send",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
@@ -3297,8 +3463,8 @@ SWIGINTERN PyObject *_wrap_MPW_Send__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "MPW_Send" "', argument " "3"" of type '" "int""'");
   } 
   arg3 = static_cast< int >(val3);
-  MPW_Send(arg1,arg2,arg3);
-  resultobj = SWIG_Py_Void();
+  result = (int)MPW_Send(arg1,arg2,arg3);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
   return resultobj;
 fail:
@@ -3322,6 +3488,7 @@ SWIGINTERN PyObject *_wrap_MPW_Recv__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
+  int result;
   
   if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_Recv",&obj0,&obj1,&obj2)) SWIG_fail;
   res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
@@ -3339,8 +3506,8 @@ SWIGINTERN PyObject *_wrap_MPW_Recv__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyOb
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "MPW_Recv" "', argument " "3"" of type '" "int""'");
   } 
   arg3 = static_cast< int >(val3);
-  MPW_Recv(arg1,arg2,arg3);
-  resultobj = SWIG_Py_Void();
+  result = (int)MPW_Recv(arg1,arg2,arg3);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
   return resultobj;
 fail:
@@ -3413,32 +3580,42 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MPW_Init(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_MPW_Init__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
-  string *arg1 = (string *) 0 ;
+  std::string *arg1 = (std::string *) 0 ;
   int *arg2 = (int *) 0 ;
-  int arg3 ;
-  int val3 ;
-  int ecode3 = 0 ;
+  int *arg3 = (int *) 0 ;
+  int arg4 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  int result;
   
-  if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_Init",&obj0,&obj1,&obj2)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:MPW_Init",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__string, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_Init" "', argument " "1"" of type '" "std::string *""'"); 
+  }
+  arg1 = reinterpret_cast< std::string * >(argp1);
   {
     /* Check if is a list */
-    if (PyList_Check(obj0)) {
-      int size = PyList_Size(obj0);
+    if (PyList_Check(obj1)) {
+      int size = PyList_Size(obj1);
       int i = 0;
-      arg1 = new string[size];
+      arg2 = (int *) malloc((size)*sizeof(int));
       for (i = 0; i < size; i++) {
-        PyObject *o = PyList_GetItem(obj0,i);
-        if (PyString_Check(o)) {
-          string tmp = PyString_AsString(o);
-          arg1[i] = tmp;
+        PyObject *o = PyList_GetItem(obj1,i);
+        if (PyInt_Check(o)) {
+          int tmp = (int) PyInt_AsLong(PyList_GetItem(obj1,i));
+          arg2[i] = tmp;
         } else {
-          PyErr_SetString(PyExc_TypeError,"list must contain strings");
-          delete [] arg1;
+          PyErr_SetString(PyExc_TypeError,"list must contain longs/ints");
+          free(arg2);
           return NULL;
         }
       }
@@ -3447,6 +3624,73 @@ SWIGINTERN PyObject *_wrap_MPW_Init(PyObject *SWIGUNUSEDPARM(self), PyObject *ar
       return NULL;
     }
   }
+  {
+    /* Check if is a list */
+    if (PyList_Check(obj2)) {
+      int size = PyList_Size(obj2);
+      int i = 0;
+      arg3 = (int *) malloc((size)*sizeof(int));
+      for (i = 0; i < size; i++) {
+        PyObject *o = PyList_GetItem(obj2,i);
+        if (PyInt_Check(o)) {
+          int tmp = (int) PyInt_AsLong(PyList_GetItem(obj2,i));
+          arg3[i] = tmp;
+        } else {
+          PyErr_SetString(PyExc_TypeError,"list must contain longs/ints");
+          free(arg3);
+          return NULL;
+        }
+      }
+    } else {
+      PyErr_SetString(PyExc_TypeError,"not a list");
+      return NULL;
+    }
+  }
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "MPW_Init" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = static_cast< int >(val4);
+  result = (int)MPW_Init(arg1,arg2,arg3,arg4);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  {
+    free((int *) arg2);
+  }
+  {
+    free((int *) arg3);
+  }
+  return resultobj;
+fail:
+  {
+    free((int *) arg2);
+  }
+  {
+    free((int *) arg3);
+  }
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_Init__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string *arg1 = (std::string *) 0 ;
+  int *arg2 = (int *) 0 ;
+  int arg3 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int val3 ;
+  int ecode3 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_Init",&obj0,&obj1,&obj2)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_std__string, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_Init" "', argument " "1"" of type '" "std::string *""'"); 
+  }
+  arg1 = reinterpret_cast< std::string * >(argp1);
   {
     /* Check if is a list */
     if (PyList_Check(obj1)) {
@@ -3474,22 +3718,135 @@ SWIGINTERN PyObject *_wrap_MPW_Init(PyObject *SWIGUNUSEDPARM(self), PyObject *ar
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "MPW_Init" "', argument " "3"" of type '" "int""'");
   } 
   arg3 = static_cast< int >(val3);
-  MPW_Init(arg1,arg2,arg3);
-  resultobj = SWIG_Py_Void();
-  {
-    delete [] arg1;
-  }
+  result = (int)MPW_Init(arg1,arg2,arg3);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   {
     free((int *) arg2);
   }
   return resultobj;
 fail:
   {
-    delete [] arg1;
-  }
-  {
     free((int *) arg2);
   }
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_Init__SWIG_2(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  std::string arg1 ;
+  int arg2 ;
+  void *argp1 ;
+  int res1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:MPW_Init",&obj0,&obj1)) SWIG_fail;
+  {
+    res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_std__string,  0  | 0);
+    if (!SWIG_IsOK(res1)) {
+      SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_Init" "', argument " "1"" of type '" "std::string""'"); 
+    }  
+    if (!argp1) {
+      SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "MPW_Init" "', argument " "1"" of type '" "std::string""'");
+    } else {
+      std::string * temp = reinterpret_cast< std::string * >(argp1);
+      arg1 = *temp;
+      if (SWIG_IsNewObj(res1)) delete temp;
+    }
+  }
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_Init" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  result = (int)MPW_Init(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_Init(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[5];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 4); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 2) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_std__string, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      {
+        int res = SWIG_AsVal_int(argv[1], NULL);
+        _v = SWIG_CheckState(res);
+      }
+      if (_v) {
+        return _wrap_MPW_Init__SWIG_2(self, args);
+      }
+    }
+  }
+  if (argc == 3) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__string, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_int, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        {
+          int res = SWIG_AsVal_int(argv[2], NULL);
+          _v = SWIG_CheckState(res);
+        }
+        if (_v) {
+          return _wrap_MPW_Init__SWIG_1(self, args);
+        }
+      }
+    }
+  }
+  if (argc == 4) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_std__string, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      void *vptr = 0;
+      int res = SWIG_ConvertPtr(argv[1], &vptr, SWIGTYPE_p_int, 0);
+      _v = SWIG_CheckState(res);
+      if (_v) {
+        void *vptr = 0;
+        int res = SWIG_ConvertPtr(argv[2], &vptr, SWIGTYPE_p_int, 0);
+        _v = SWIG_CheckState(res);
+        if (_v) {
+          {
+            int res = SWIG_AsVal_int(argv[3], NULL);
+            _v = SWIG_CheckState(res);
+          }
+          if (_v) {
+            return _wrap_MPW_Init__SWIG_0(self, args);
+          }
+        }
+      }
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'MPW_Init'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    MPW_Init(std::string *,int *,int *,int)\n"
+    "    MPW_Init(std::string *,int *,int)\n"
+    "    MPW_Init(std::string,int)\n");
   return NULL;
 }
 
@@ -3517,6 +3874,36 @@ SWIGINTERN PyObject *_wrap_MPW_setWin(PyObject *SWIGUNUSEDPARM(self), PyObject *
   } 
   arg2 = static_cast< int >(val2);
   MPW_setWin(arg1,arg2);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_setPathWin(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int arg2 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  int val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:MPW_setPathWin",&obj0,&obj1)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "MPW_setPathWin" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  ecode2 = SWIG_AsVal_int(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_setPathWin" "', argument " "2"" of type '" "int""'");
+  } 
+  arg2 = static_cast< int >(val2);
+  MPW_setPathWin(arg1,arg2);
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -3575,57 +3962,6 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_MPW_ReOpenChannels(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
-  PyObject *resultobj = 0;
-  int *arg1 = (int *) 0 ;
-  int arg2 ;
-  int val2 ;
-  int ecode2 = 0 ;
-  PyObject * obj0 = 0 ;
-  PyObject * obj1 = 0 ;
-  
-  if (!PyArg_ParseTuple(args,(char *)"OO:MPW_ReOpenChannels",&obj0,&obj1)) SWIG_fail;
-  {
-    /* Check if is a list */
-    if (PyList_Check(obj0)) {
-      int size = PyList_Size(obj0);
-      int i = 0;
-      arg1 = (int *) malloc((size)*sizeof(int));
-      for (i = 0; i < size; i++) {
-        PyObject *o = PyList_GetItem(obj0,i);
-        if (PyInt_Check(o)) {
-          int tmp = (int) PyInt_AsLong(PyList_GetItem(obj0,i));
-          arg1[i] = tmp;
-        } else {
-          PyErr_SetString(PyExc_TypeError,"list must contain longs/ints");
-          free(arg1);
-          return NULL;
-        }
-      }
-    } else {
-      PyErr_SetString(PyExc_TypeError,"not a list");
-      return NULL;
-    }
-  }
-  ecode2 = SWIG_AsVal_int(obj1, &val2);
-  if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_ReOpenChannels" "', argument " "2"" of type '" "int""'");
-  } 
-  arg2 = static_cast< int >(val2);
-  MPW_ReOpenChannels(arg1,arg2);
-  resultobj = SWIG_Py_Void();
-  {
-    free((int *) arg1);
-  }
-  return resultobj;
-fail:
-  {
-    free((int *) arg1);
-  }
-  return NULL;
-}
-
-
 SWIGINTERN PyObject *_wrap_MPW_Finalize(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   int result;
@@ -3659,6 +3995,7 @@ SWIGINTERN PyObject *_wrap_MPW_PSendRecv(PyObject *SWIGUNUSEDPARM(self), PyObjec
   PyObject * obj3 = 0 ;
   PyObject * obj4 = 0 ;
   PyObject * obj5 = 0 ;
+  int result;
   
   if (!PyArg_ParseTuple(args,(char *)"OOOOOO:MPW_PSendRecv",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   {
@@ -3740,8 +4077,8 @@ SWIGINTERN PyObject *_wrap_MPW_PSendRecv(PyObject *SWIGUNUSEDPARM(self), PyObjec
     SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "MPW_PSendRecv" "', argument " "6"" of type '" "int""'");
   } 
   arg6 = static_cast< int >(val6);
-  MPW_PSendRecv(arg1,arg2,arg3,arg4,arg5,arg6);
-  resultobj = SWIG_Py_Void();
+  result = (int)MPW_PSendRecv(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   {
     free((char **) arg1);
   }
@@ -3792,6 +4129,7 @@ SWIGINTERN PyObject *_wrap_MPW_SendRecv(PyObject *SWIGUNUSEDPARM(self), PyObject
   PyObject * obj3 = 0 ;
   PyObject * obj4 = 0 ;
   PyObject * obj5 = 0 ;
+  int result;
   
   if (!PyArg_ParseTuple(args,(char *)"OOOOOO:MPW_SendRecv",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5)) SWIG_fail;
   res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
@@ -3841,8 +4179,8 @@ SWIGINTERN PyObject *_wrap_MPW_SendRecv(PyObject *SWIGUNUSEDPARM(self), PyObject
     SWIG_exception_fail(SWIG_ArgError(ecode6), "in method '" "MPW_SendRecv" "', argument " "6"" of type '" "int""'");
   } 
   arg6 = static_cast< int >(val6);
-  MPW_SendRecv(arg1,arg2,arg3,arg4,arg5,arg6);
-  resultobj = SWIG_Py_Void();
+  result = (int)MPW_SendRecv(arg1,arg2,arg3,arg4,arg5,arg6);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
   if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
   {
@@ -4789,6 +5127,113 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_MPW_ISendRecv(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  char *arg1 = (char *) 0 ;
+  long long arg2 ;
+  char *arg3 = (char *) 0 ;
+  long long arg4 ;
+  int arg5 ;
+  int res1 ;
+  char *buf1 = 0 ;
+  int alloc1 = 0 ;
+  long long val2 ;
+  int ecode2 = 0 ;
+  int res3 ;
+  char *buf3 = 0 ;
+  int alloc3 = 0 ;
+  long long val4 ;
+  int ecode4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOO:MPW_ISendRecv",&obj0,&obj1,&obj2,&obj3,&obj4)) SWIG_fail;
+  res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "MPW_ISendRecv" "', argument " "1"" of type '" "char *""'");
+  }
+  arg1 = reinterpret_cast< char * >(buf1);
+  ecode2 = SWIG_AsVal_long_SS_long(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_ISendRecv" "', argument " "2"" of type '" "long long""'");
+  } 
+  arg2 = static_cast< long long >(val2);
+  res3 = SWIG_AsCharPtrAndSize(obj2, &buf3, NULL, &alloc3);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "MPW_ISendRecv" "', argument " "3"" of type '" "char *""'");
+  }
+  arg3 = reinterpret_cast< char * >(buf3);
+  ecode4 = SWIG_AsVal_long_SS_long(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "MPW_ISendRecv" "', argument " "4"" of type '" "long long""'");
+  } 
+  arg4 = static_cast< long long >(val4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "MPW_ISendRecv" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = static_cast< int >(val5);
+  result = (int)MPW_ISendRecv(arg1,arg2,arg3,arg4,arg5);
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
+  return resultobj;
+fail:
+  if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
+  if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_Has_NBE_Finished(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:MPW_Has_NBE_Finished",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "MPW_Has_NBE_Finished" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  result = (bool)MPW_Has_NBE_Finished(arg1);
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_MPW_Wait(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  int arg1 ;
+  int val1 ;
+  int ecode1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:MPW_Wait",&obj0)) SWIG_fail;
+  ecode1 = SWIG_AsVal_int(obj0, &val1);
+  if (!SWIG_IsOK(ecode1)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "MPW_Wait" "', argument " "1"" of type '" "int""'");
+  } 
+  arg1 = static_cast< int >(val1);
+  MPW_Wait(arg1);
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_MPW_getPacingRate(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   double result;
@@ -4833,6 +5278,7 @@ SWIGINTERN PyObject *_wrap_MPW_Init_c(PyObject *SWIGUNUSEDPARM(self), PyObject *
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   PyObject * obj2 = 0 ;
+  int result;
   
   if (!PyArg_ParseTuple(args,(char *)"OOO:MPW_Init_c",&obj0,&obj1,&obj2)) SWIG_fail;
   {
@@ -4883,8 +5329,8 @@ SWIGINTERN PyObject *_wrap_MPW_Init_c(PyObject *SWIGUNUSEDPARM(self), PyObject *
     SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "MPW_Init_c" "', argument " "3"" of type '" "int""'");
   } 
   arg3 = static_cast< int >(val3);
-  MPW_Init_c(arg1,arg2,arg3);
-  resultobj = SWIG_Py_Void();
+  result = (int)MPW_Init_c(arg1,arg2,arg3);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   {
     free((char **) arg1);
   }
@@ -4914,6 +5360,7 @@ SWIGINTERN PyObject *_wrap_MPW_Init1_c(PyObject *SWIGUNUSEDPARM(self), PyObject 
   int ecode2 = 0 ;
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
+  int result;
   
   if (!PyArg_ParseTuple(args,(char *)"OO:MPW_Init1_c",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_AsCharPtrAndSize(obj0, &buf1, NULL, &alloc1);
@@ -4926,8 +5373,8 @@ SWIGINTERN PyObject *_wrap_MPW_Init1_c(PyObject *SWIGUNUSEDPARM(self), PyObject 
     SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "MPW_Init1_c" "', argument " "2"" of type '" "int""'");
   } 
   arg2 = static_cast< int >(val2);
-  MPW_Init1_c(arg1,arg2);
-  resultobj = SWIG_Py_Void();
+  result = (int)MPW_Init1_c(arg1,arg2);
+  resultobj = SWIG_From_int(static_cast< int >(result));
   if (alloc1 == SWIG_NEWOBJ) delete[] buf1;
   return resultobj;
 fail:
@@ -5223,14 +5670,17 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SWIG_PyInstanceMethod_New", (PyCFunction)SWIG_PyInstanceMethod_New, METH_O, NULL},
 	 { (char *)"MPW_DNSResolve", _wrap_MPW_DNSResolve, METH_VARARGS, NULL},
 	 { (char *)"MPW_setAutoTuning", _wrap_MPW_setAutoTuning, METH_VARARGS, NULL},
+	 { (char *)"MPW_AutoTuning", _wrap_MPW_AutoTuning, METH_VARARGS, NULL},
 	 { (char *)"MPW_Print", _wrap_MPW_Print, METH_VARARGS, NULL},
 	 { (char *)"MPW_NumChannels", _wrap_MPW_NumChannels, METH_VARARGS, NULL},
+	 { (char *)"MPW_CreatePathWithoutConnect", _wrap_MPW_CreatePathWithoutConnect, METH_VARARGS, NULL},
+	 { (char *)"MPW_ConnectPath", _wrap_MPW_ConnectPath, METH_VARARGS, NULL},
 	 { (char *)"MPW_CreatePath", _wrap_MPW_CreatePath, METH_VARARGS, NULL},
 	 { (char *)"MPW_DestroyPath", _wrap_MPW_DestroyPath, METH_VARARGS, NULL},
 	 { (char *)"MPW_Init", _wrap_MPW_Init, METH_VARARGS, NULL},
 	 { (char *)"MPW_setWin", _wrap_MPW_setWin, METH_VARARGS, NULL},
+	 { (char *)"MPW_setPathWin", _wrap_MPW_setPathWin, METH_VARARGS, NULL},
 	 { (char *)"MPW_CloseChannels", _wrap_MPW_CloseChannels, METH_VARARGS, NULL},
-	 { (char *)"MPW_ReOpenChannels", _wrap_MPW_ReOpenChannels, METH_VARARGS, NULL},
 	 { (char *)"MPW_Finalize", _wrap_MPW_Finalize, METH_VARARGS, NULL},
 	 { (char *)"MPW_PSendRecv", _wrap_MPW_PSendRecv, METH_VARARGS, NULL},
 	 { (char *)"MPW_SendRecv", _wrap_MPW_SendRecv, METH_VARARGS, NULL},
@@ -5243,6 +5693,9 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"MPW_splitBuf", _wrap_MPW_splitBuf, METH_VARARGS, NULL},
 	 { (char *)"MPW_Barrier", _wrap_MPW_Barrier, METH_VARARGS, NULL},
 	 { (char *)"MPW_setChunkSize", _wrap_MPW_setChunkSize, METH_VARARGS, NULL},
+	 { (char *)"MPW_ISendRecv", _wrap_MPW_ISendRecv, METH_VARARGS, NULL},
+	 { (char *)"MPW_Has_NBE_Finished", _wrap_MPW_Has_NBE_Finished, METH_VARARGS, NULL},
+	 { (char *)"MPW_Wait", _wrap_MPW_Wait, METH_VARARGS, NULL},
 	 { (char *)"MPW_getPacingRate", _wrap_MPW_getPacingRate, METH_VARARGS, NULL},
 	 { (char *)"MPW_setPacingRate", _wrap_MPW_setPacingRate, METH_VARARGS, NULL},
 	 { (char *)"MPW_Init_c", _wrap_MPW_Init_c, METH_VARARGS, NULL},
@@ -5260,28 +5713,28 @@ static swig_type_info _swigt__p_char = {"_p_char", "char *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_int = {"_p_int", "int *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_long_long = {"_p_long_long", "long long *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_p_char = {"_p_p_char", "char **", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_string = {"_p_string", "string *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__string = {"_p_std__string", "std::string *", 0, 0, (void*)0, 0};
 
 static swig_type_info *swig_type_initial[] = {
   &_swigt__p_char,
   &_swigt__p_int,
   &_swigt__p_long_long,
   &_swigt__p_p_char,
-  &_swigt__p_string,
+  &_swigt__p_std__string,
 };
 
 static swig_cast_info _swigc__p_char[] = {  {&_swigt__p_char, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_int[] = {  {&_swigt__p_int, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_long_long[] = {  {&_swigt__p_long_long, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_p_char[] = {  {&_swigt__p_p_char, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_string[] = {  {&_swigt__p_string, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__string[] = {  {&_swigt__p_std__string, 0, 0, 0},{0, 0, 0, 0}};
 
 static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_char,
   _swigc__p_int,
   _swigc__p_long_long,
   _swigc__p_p_char,
-  _swigc__p_string,
+  _swigc__p_std__string,
 };
 
 
@@ -5875,7 +6328,7 @@ SWIG_init(void) {
   SWIG_InstallConstants(d,swig_const_table);
   
   
-  SWIG_Python_SetConstant(d, "PacingMode",SWIG_From_int(static_cast< int >(1)));
+  SWIG_Python_SetConstant(d, "MPW_PacingMode",SWIG_From_int(static_cast< int >(1)));
 #if PY_VERSION_HEX >= 0x03000000
   return m;
 #else

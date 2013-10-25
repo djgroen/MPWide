@@ -66,15 +66,15 @@ except AttributeError:
     _newclass = 0
 
 
-PacingMode = _MPWide.PacingMode
-
-def MPW_DNSResolve(*args):
-  return _MPWide.MPW_DNSResolve(*args)
-MPW_DNSResolve = _MPWide.MPW_DNSResolve
+MPW_PacingMode = _MPWide.MPW_PacingMode
 
 def MPW_setAutoTuning(*args):
   return _MPWide.MPW_setAutoTuning(*args)
 MPW_setAutoTuning = _MPWide.MPW_setAutoTuning
+
+def MPW_AutoTuning():
+  return _MPWide.MPW_AutoTuning()
+MPW_AutoTuning = _MPWide.MPW_AutoTuning
 
 def MPW_Print():
   return _MPWide.MPW_Print()
@@ -84,6 +84,14 @@ def MPW_NumChannels():
   return _MPWide.MPW_NumChannels()
 MPW_NumChannels = _MPWide.MPW_NumChannels
 
+def MPW_CreatePathWithoutConnect(*args):
+  return _MPWide.MPW_CreatePathWithoutConnect(*args)
+MPW_CreatePathWithoutConnect = _MPWide.MPW_CreatePathWithoutConnect
+
+def MPW_ConnectPath(*args):
+  return _MPWide.MPW_ConnectPath(*args)
+MPW_ConnectPath = _MPWide.MPW_ConnectPath
+
 def MPW_CreatePath(*args):
   return _MPWide.MPW_CreatePath(*args)
 MPW_CreatePath = _MPWide.MPW_CreatePath
@@ -92,21 +100,17 @@ def MPW_DestroyPath(*args):
   return _MPWide.MPW_DestroyPath(*args)
 MPW_DestroyPath = _MPWide.MPW_DestroyPath
 
-def MPW_Init(*args):
-  return _MPWide.MPW_Init(*args)
-MPW_Init = _MPWide.MPW_Init
-
 def MPW_setWin(*args):
   return _MPWide.MPW_setWin(*args)
 MPW_setWin = _MPWide.MPW_setWin
 
+def MPW_setPathWin(*args):
+  return _MPWide.MPW_setPathWin(*args)
+MPW_setPathWin = _MPWide.MPW_setPathWin
+
 def MPW_CloseChannels(*args):
   return _MPWide.MPW_CloseChannels(*args)
 MPW_CloseChannels = _MPWide.MPW_CloseChannels
-
-def MPW_ReOpenChannels(*args):
-  return _MPWide.MPW_ReOpenChannels(*args)
-MPW_ReOpenChannels = _MPWide.MPW_ReOpenChannels
 
 def MPW_Finalize():
   return _MPWide.MPW_Finalize()
@@ -144,6 +148,18 @@ def MPW_setChunkSize(*args):
   return _MPWide.MPW_setChunkSize(*args)
 MPW_setChunkSize = _MPWide.MPW_setChunkSize
 
+def MPW_ISendRecv(*args):
+  return _MPWide.MPW_ISendRecv(*args)
+MPW_ISendRecv = _MPWide.MPW_ISendRecv
+
+def MPW_Has_NBE_Finished(*args):
+  return _MPWide.MPW_Has_NBE_Finished(*args)
+MPW_Has_NBE_Finished = _MPWide.MPW_Has_NBE_Finished
+
+def MPW_Wait(*args):
+  return _MPWide.MPW_Wait(*args)
+MPW_Wait = _MPWide.MPW_Wait
+
 def MPW_getPacingRate():
   return _MPWide.MPW_getPacingRate()
 MPW_getPacingRate = _MPWide.MPW_getPacingRate
@@ -172,6 +188,14 @@ def MPW_PSendRecv_c(*args):
   return _MPWide.MPW_PSendRecv_c(*args)
 MPW_PSendRecv_c = _MPWide.MPW_PSendRecv_c
 
+
+def MPW_DNSResolve(*args):
+  return _MPWide.MPW_DNSResolve(*args)
+MPW_DNSResolve = _MPWide.MPW_DNSResolve
+
+def MPW_Init(*args):
+  return _MPWide.MPW_Init(*args)
+MPW_Init = _MPWide.MPW_Init
 
 def MPW_DSendRecv(*args):
   return _MPWide.MPW_DSendRecv(*args)
