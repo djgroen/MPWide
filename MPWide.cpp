@@ -108,7 +108,7 @@ struct init_tmp {
   * buffers of local network interfaces, which in turn result in worse and less stable performance.
   */
 #if MPW_PacingMode == 1
-  static double pacing_rate = 100*1024*1024; //Pacing rate per stream.
+  static double pacing_rate = 100*1024*1024; //Pacing rate per stream. This is the maximum throughput in bytes/sec possible for each stream.
   static useconds_t pacing_sleeptime = useconds_t(1000000/(pacing_rate/(1.0*tcpbuf_ssize))); //Sleep time for SendRecvs in microseconds.
 
   double MPW_getPacingRate() {
@@ -126,6 +126,7 @@ struct init_tmp {
     }
   }
 
+  /* autotunePacingRate selects an appropriate pacing rate depending on the number of streams selected. */
   static void autotunePacingRate()
   {
     int max_streams = 0;
@@ -187,7 +188,7 @@ void MPW_setChunkSize(int sending, int receiving) {
   LOG_DEBUG("Chunk Size  modified to: " << sending << "/" << receiving << ".");
 }
 
-/* Convert a host name to an ip address. */
+/* MPW_DNSResolve converts a host name to an ip address. */
 char *MPW_DNSResolve(char *host){
   if(isdigit(host[0])) {
     return host;
@@ -230,7 +231,7 @@ long long int bytes_sent;
 bool stop_monitor = false;
 
 #ifdef PERF_TIMING
-/* Performs per-second bandwidth monitoring in real-time */
+/* Performs per-second throughput monitoring in real-time */
 void *MPW_TBandwidth_Monitor(void *args)
 {
   std::ofstream myfile;
@@ -254,6 +255,7 @@ void *MPW_TBandwidth_Monitor(void *args)
 #endif // ifdef PERF_TIMING
 #endif // MONITORING == 1
 
+/* Initialize a single MPWide TCP stream (used within a pthread). */
 void* MPW_InitStream(void* args) 
 {
   init_tmp &t = *((init_tmp *) args);
@@ -327,7 +329,7 @@ void MPW_CloseChannels(int* channel, int numchannels)
   }
 }
 
-// internal
+/* Add new MPWide streams that are associated to a single MPWide Path. */
 void MPW_AddStreams(std::string* url, int* ports, int* cports, const int *stream_indices, const int numstreams) {
   if (client == NULL) {
     client     = new Socket*[MAX_NUM_STREAMS];
@@ -509,6 +511,9 @@ int MPW_CreatePathWithoutConnect(std::string host, int server_side_base_port, co
   return path_id;
 }
 
+/** Connect a path that has been created and provided with streams, to a remote endpoint,
+ * or have it act as a server. 
+ */
 int MPW_ConnectPath(int path_id, bool server_wait) {
   int ret = MPW_InitStreams(paths[path_id]->streams, paths[path_id]->num_streams, server_wait);
   
@@ -535,6 +540,7 @@ int MPW_CreatePath(std::string host, int server_side_base_port, int streams_in_p
   return path_id;
 }
 
+/* Remove a stream from a path. */
 void EraseStream(int stream) {
   delete client[stream];
   client[stream] = NULL;
@@ -553,17 +559,21 @@ void EraseStream(int stream) {
   }
 }
 
-void MPW_setWin(int channel, int size) {
-  client[channel]->setWin(size);
+/* Attempt to change the TCP window size for a single stream. */
+void MPW_setWin(int stream, int size) {
+  client[stream]->setWin(size);
 }
 
+/* Attempt to change the TCP window size for a single path. */
 void MPW_setPathWin(int path, int size) {
   for(int i=0; i < paths[path]->num_streams; i++) {
     client[paths[path]->streams[i]]->setWin(size);
   }
 }
 
-// Return 0 on success (negative on failure).
+/** Destroy an MPWide path (disconnect, then delete).
+ * Return 0 on success (negative on failure).
+ */
 int MPW_DestroyPath(int path) {
   for (int j = 0; j < paths[path]->num_streams; j++) {
     EraseStream(paths[path]->streams[j]);
@@ -605,7 +615,7 @@ int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
 }
 
 
-/* Variant that does not require client port binding. */
+/* Legacy initialization function for MPWide that does not require client port binding. */
 int MPW_Init(std::string* url, int* ports, int numstreams) 
 {
   int cports[numstreams];
@@ -616,13 +626,14 @@ int MPW_Init(std::string* url, int* ports, int numstreams)
   return MPW_Init(url, ports, cports, numstreams);
 }
 
-/* Shorthand initialization call for local processes that use a single stream. */
+/* Legacy shorthand initialization call for local processes that use a single stream. */
 int MPW_Init(std::string url, int port) {
   std::string u1[1] = {url};
   int    p1[1] = {port};
   return MPW_Init(u1,p1,1);
 }
 
+/* AS the last two functions, but then compatible for C. */
 extern "C" {
   int MPW_Init_c (char** url, int* ports, int numstreams) 
   {
@@ -682,12 +693,13 @@ void MPW_Send(char* sendbuf, long long int size, int* channels, int num_channels
   MPW_SendRecv(sendbuf,size,NULL,0,channels,num_channels);
 }
 
+/* Wrapping function for SendRecv in case no sending is required. */
 void MPW_Recv(char* buf, long long int size, int* channels, int num_channels)
 {
   MPW_SendRecv(NULL,0,buf,size,channels,num_channels);
 }
 
-/* Send/Recv between two processes. */
+/* Send/Recv (part of) the data between two processes using a single TCP stream and a single thread. */
 int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* const recvbuf, const long long int recvsize, const int base_channel)
 {
   int * const ret = new int(0);
@@ -766,6 +778,7 @@ int *InThreadSendRecv(char* const sendbuf, const long long int sendsize, char* c
   return ret;
 }
 
+/* Data type intended to contain information for MPW_Relay (which relies on threads) */
 typedef struct relay_struct{
   int channel;
   int channel2;
@@ -843,6 +856,7 @@ void* MPW_Relay(void* args)
   return NULL;
 }
 
+/* Unused function that can allow automatic termination when a file named 'stop' is present. */
 void* CheckStop(void* args) {
   while(true) {
     if(!access("stop",F_OK)) {
@@ -879,8 +893,6 @@ void MPW_Relay(int* channels, int* channels2, int num_channels) {
 /* Dynamically sized Send/Recv between two processes. */
 void *MPW_TDynEx(void *args)
 {
-//  std::cout << "TDynEx." << std::endl;
-//  double t = GetTime();
   bool cycling = false;
   thread_tmp *ta = (thread_tmp *)args;
 
@@ -922,9 +934,6 @@ void *MPW_TDynEx(void *args)
   long long int offset_r = 0; //stores correct recv buffer offset for this thread.
 
   /* Second: await the recvsize */
-//  if(id < numrchannels) {
-
-//  std::cout << "Receiving size from channel " << channel2 << ", id: " << id << ", numrchannels: " << numrchannels << std::endl;
 
   while(recvsize > d || sendsize > c) {
     int mode = selectSockets(channel,channel2,mask);
@@ -1121,7 +1130,7 @@ long long int MPW_DSendRecv( char *sendbuf, long long int sendsize,
   return total_recv_size;
 }
 
-/* Low-level command */
+/* The core function implementing MPW_Cycle. */
 long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, long long int maxrecvsize2, int* ch_send, int nc_send, int* ch_recv, int nc_recv, bool dynamic) {
   #ifdef PERF_TIMING
   double t = GetTime();
@@ -1234,8 +1243,13 @@ long long int Cycle(char** sendbuf2, long long int sendsize2, char* recvbuf2, lo
   return (ta[0]->dyn_recvsize)[0];
 }
 
-/* Recv from one set of channels. Send through to another set of channels. */
-long long int MPW_Cycle(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize,
+/** CycleWrapper
+ * Recv from one set of channels. Send through to another set of channels. 
+ * MPW_Cycle may become obsolete in time, if we are able to obtain the 
+ * same performance with non-blocking transfer calls.
+ * This is an internal function used by MPW_Cycle and MPW_DCycle.
+ */
+long long int CycleWrapper(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize,
              int* ch_send, int num_ch_send, int* ch_recv, int num_ch_recv, bool dynamic) 
 {
   #if SendRecvInputReport == 1
@@ -1274,18 +1288,28 @@ long long int MPW_Cycle(char* sendbuf, long long int sendsize, char* recvbuf, lo
   return total_recv_size;
 }
 
+/**
+ * Dynamically-sized MPW_Cycle. Note, this may give problems when there are many messages of size 0, so it is good to avoid these.
+ */
 long long int MPW_DCycle(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize,
              int* ch_send, int num_ch_send, int* ch_recv, int num_ch_recv)
 {
-  return MPW_Cycle(sendbuf, sendsize, recvbuf, maxrecvsize, ch_send, num_ch_send, ch_recv, num_ch_recv, true);
+  return CycleWrapper(sendbuf, sendsize, recvbuf, maxrecvsize, ch_send, num_ch_send, ch_recv, num_ch_recv, true);
 }
 
+/**
+ * Regular MPW_Cycle. Note, this may give problems when there are many messages of size 0, so it is good to avoid these.
+ */
 void MPW_Cycle(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize,
              int* ch_send, int num_ch_send, int* ch_recv, int num_ch_recv)
 {
-  MPW_Cycle(sendbuf, sendsize, recvbuf, maxrecvsize, ch_send, num_ch_send, ch_recv, num_ch_recv, false);
+  CycleWrapper(sendbuf, sendsize, recvbuf, maxrecvsize, ch_send, num_ch_send, ch_recv, num_ch_recv, false);
 }
 
+/** MPW_PSendRecv
+ * This function relies of buffers that have been split in advance. Unless there is a strong use case emerging, we will
+ * render it obsolete in a future major release of MPWide.
+ */
 int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long long int* recvsize, int* channel, int num_channels)
 {
 #ifdef PERF_TIMING
@@ -1351,6 +1375,9 @@ int MPW_PSendRecv(char** sendbuf, long long int* sendsize, char** recvbuf, long 
   return return_value;
 }
 
+/** MPW_SendRecv
+ * The core function implementing MPW_SendRecv, which does two-way data passing between endpoints over an array of MPWide streams.
+ */
 int MPW_SendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int* channel, int nc){
 
 #if SendRecvInputReport == 1
@@ -1502,7 +1529,7 @@ void *MPW_TSendRecv_Full(void *args)
   return NULL;
 }
 
-
+/* Non-Blocking Exchange style MPWide receive. */
 int MPW_ISendRecv( char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
   MPW_NBE new_nonblocking_exchange = MPW_NBE();
   new_nonblocking_exchange.NBE_args = thread_tmp();
@@ -1541,11 +1568,13 @@ int Find_NBE_By_ID(int NBE_id) {
   return element_number;
 }
 
+/* Check if a particular non-blocking exchange has completed. */
 bool MPW_Has_NBE_Finished(int NBE_id) {
   int element_number = Find_NBE_By_ID(NBE_id);
   return(MPW_nonBlockingExchanges[element_number].NBE_args.channel >= 0);
 }
 
+/* Wait until a particular non-blocking exchange has completed. */
 void MPW_Wait(int NBE_id) {
   int element_number = Find_NBE_By_ID(NBE_id);  
   pthread_join(MPW_nonBlockingExchanges[element_number].pthr_id, NULL);

@@ -107,7 +107,10 @@ int Test_MPW_setChunkSize() {
   return 0;
 }
 
+int MPW_test_count = 0;
+
 int checkOutput(int i, int fails) {
+  MPW_test_count++;
   if(i<0) {
     cout << "This Unit Test Failed." << endl;
     return fails+1;
@@ -139,5 +142,6 @@ int main(int argc, char** argv){
   checkOutput(i, fails);
 
   cout << "Unit tests completed. Number of failed tests: " << fails << endl;
+  cout << "Number of successful tests: " << MPW_test_count - fails << endl;
   cout << "Please also run MPW_Functionaltests to more completely test MPWide." << endl;
 }

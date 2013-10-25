@@ -176,8 +176,6 @@ void *communicating_thread(void *data)
   }
   delete [] buf;
 
-  cout << "MPWTestConcurrent completed successfully." << endl;
-  
   return NULL;
 }
 
@@ -244,6 +242,8 @@ int main(int argc, char** argv){
   pthread_mutex_destroy(&path_mutex);
   
   MPW_Finalize();
+
+  cout << "MPWTestConcurrent completed successfully." << endl;
 
   return exit_value;
 }
