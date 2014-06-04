@@ -34,6 +34,12 @@
 
 #define SendRecvInputReport 0
 
+/* MPW-CP loads data in chunks and then ships it out using MPWSendRecv.
+   this paramater determines the chunk size. A larger size means a more
+   efficient transfer but also larger memory usage. */
+
+#define MpwCpReadBufferSize (1024*1024*1024)
+
 //// Logging macros ////
 
 #define LVL_NONE -1

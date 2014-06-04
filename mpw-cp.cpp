@@ -37,13 +37,14 @@
 using namespace std;
 
 #include "MPWide.h"
+#include "mpwide-macros.h"
 #define min(X,Y)   ((X) < (Y) ? (X) : (Y))
 #define CLIENT_BINDING 0
 
 char prefix[256]    = "test";
 bool add_suffix    = false;
 char local_dir[256] = "/data/GreeM/Snapshot";
-long buffer_size=1000000000;
+long buffer_size = MpwCpReadBufferSize; //obtained from mpwide-macros.h
 
 static vector <string> filelist;
 static vector <string> allfiles;
