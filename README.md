@@ -1,14 +1,7 @@
-MPWide
+# MPWide
 =======
 
 MPWide is a communication library for message passing across wide area networks.
-
-------------------
-MPWide README
-version 1.8.1
-------------------
-
-This is a README for the MPWide communication library, which has been written by Derek Groen.
 
 For the main documentation, please refer to doc/MPWide Manual.pdf or doc/MPWide Manual.odt.
 
@@ -38,9 +31,7 @@ Main extensions of this version over the one described in the paper are:
 Open issues:
 - See the github page for a list of open issues.
 
-------------------
-Major Updates
-------------------
+## Major Updates
 
 * October 15th 2013,
 -- Fixed mpw-cp.
