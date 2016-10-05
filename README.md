@@ -5,7 +5,7 @@ MPWide is a communication library for message passing across wide area networks.
 
 ------------------
 MPWide README
-version 1.8.1, last modified on October 15th 2013
+version 1.8.1
 ------------------
 
 This is a README for the MPWide communication library, which has been written by Derek Groen.
@@ -18,11 +18,10 @@ feel free to contact me at:
 djgroennl@gmail.com
 
 More information on MPWide can be found at:
-  https://github.com/djgroen/MPWide
-  http://castle.strw.leidenuniv.nl/software/mpwide.html
+  https://github.com/djgroen/MPWide 
 
 The MPWide paper can be found at:
-  http://iopscience.iop.org/1749-4699/3/1/015002
+  http://dx.doi.org/10.5334/jors.ah
 
 Main extensions of this version over the one described in the paper are:
 - Support for simplified 'path' data structure (where a path is a connection
@@ -40,7 +39,7 @@ Open issues:
 - See the github page for a list of open issues.
 
 ------------------
-Recent Updates
+Major Updates
 ------------------
 
 * October 15th 2013,
