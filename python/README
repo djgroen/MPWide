@@ -1,1 +1,11 @@
-run `sh compile.sh` to regenerate the Python interface code.
+The Python interface now relies on the Python ctypes module. Compilation is no longer necessary (we dropped swig), and many of the other files here now are redundant (they may be taken out soon).
+
+To test it just run on the server machine:
+
+python MPWTest.py 0
+
+and on the client machine:
+
+python MPWTest.py <ip address or hostname of the server>
+
+Make sure the firewall is properly open though :).

@@ -43,7 +43,7 @@ winsize = 16*1024*1024
 if len(sys.argv)>5:
     winsize = int(sys.argv[5])
   
-path_id = MPWide.MPW_CreatePath(host,16256,size);
+path_id = MPWide.MPW_CreatePath_c(host,16256,size);
 
 msglen = bufsize*1024 
 

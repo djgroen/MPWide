@@ -44,12 +44,14 @@ int MPW_CreatePath(std::string host, int server_side_base_port, int num_streams)
 // Return 0 on success (negative on failure).
 int MPW_DestroyPath(int path);
 
-int MPW_Send(char* sendbuf, long long int sendsize, int path);
-int MPW_Recv(char* recvbuf, long long int recvsize, int path);
-int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path);
-// returns the size of the newly received data. 
-int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize, int path);
 
+extern "C" {
+  int MPW_Send(char* sendbuf, long long int sendsize, int path);
+  int MPW_Recv(char* recvbuf, long long int recvsize, int path);
+  int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path);
+  // returns the size of the newly received data. 
+  int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize, int path);
+}
 
 /* Initialize MPWide. */
 int MPW_Init(std::string* url, int* server_side_ports, int* client_side_ports, int num_channels);
@@ -106,11 +108,15 @@ void MPW_Wait(int NBE_id);
 
 #if MPW_PacingMode == 1
 /* Get and set rates for pacing data. */
-double MPW_getPacingRate();
-void   MPW_setPacingRate(double rate);
+extern "C" {
+  double MPW_getPacingRate();
+  void   MPW_setPacingRate(double rate);
+}
 #endif
 
 extern "C" {
+  int MPW_CreatePath_c (char* host, int server_side_base_port, int streams_in_path);
+
   int MPW_Init_c (char** url, int* ports, int numsockets); 
   int MPW_Init1_c (char* url, int port);
   void MPW_SendRecv1_c (char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int base_channel);

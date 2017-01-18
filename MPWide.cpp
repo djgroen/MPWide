@@ -111,9 +111,12 @@ struct init_tmp {
   static double pacing_rate = 100*1024*1024; //Pacing rate per stream. This is the maximum throughput in bytes/sec possible for each stream.
   static useconds_t pacing_sleeptime = useconds_t(1000000/(pacing_rate/(1.0*tcpbuf_ssize))); //Sleep time for SendRecvs in microseconds.
 
+
+extern "C" {
   double MPW_getPacingRate() {
     return pacing_rate;
   }
+
   void MPW_setPacingRate(double rate) {
     if(rate == -1) {
       pacing_rate = -1;
@@ -125,6 +128,7 @@ struct init_tmp {
       LOG_INFO("Pacing enabled, rate = " << pacing_rate << " => delay = " << pacing_sleeptime << " us.");
     }
   }
+}
 
   /* autotunePacingRate selects an appropriate pacing rate depending on the number of streams selected. */
   static void autotunePacingRate()
@@ -540,6 +544,14 @@ int MPW_CreatePath(std::string host, int server_side_base_port, int streams_in_p
   return path_id;
 }
 
+extern "C" {
+int MPW_CreatePath_c (char* host, int server_side_base_port, int streams_in_path) {
+    return MPW_CreatePath(host, server_side_base_port, streams_in_path);
+  }
+}
+
+
+
 /* Remove a stream from a path. */
 void EraseStream(int stream) {
   delete client[stream];
@@ -597,21 +609,25 @@ int MPW_DestroyPath(int path) {
   return 0;
 }
 
-/* Path-based Send and Recv operations*/
-int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize, int path) {
-  return MPW_DSendRecv(sendbuf, sendsize, recvbuf, maxrecvsize, paths[path]->streams, paths[path]->num_streams);
-}
+extern "C" {
 
-int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
-  return MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
-}
+  /* Path-based Send and Recv operations*/
+  int MPW_DSendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int maxrecvsize, int path) {
+    return MPW_DSendRecv(sendbuf, sendsize, recvbuf, maxrecvsize, paths[path]->streams, paths[path]->num_streams);
+  }
 
-int MPW_Send(char* sendbuf, long long int sendsize, int path) {
-  return MPW_SendRecv(sendbuf, sendsize, NULL, 0, paths[path]->streams, paths[path]->num_streams);
-}
+  int MPW_SendRecv(char* sendbuf, long long int sendsize, char* recvbuf, long long int recvsize, int path) {
+    return MPW_SendRecv(sendbuf, sendsize, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
+  }
 
-int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
-  return MPW_SendRecv(NULL, 0, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
+  int MPW_Send(char* sendbuf, long long int sendsize, int path) {
+    return MPW_SendRecv(sendbuf, sendsize, NULL, 0, paths[path]->streams, paths[path]->num_streams);
+  }
+
+  int MPW_Recv(char* recvbuf, long long int recvsize, int path) {
+    return MPW_SendRecv(NULL, 0, recvbuf, recvsize,  paths[path]->streams, paths[path]->num_streams);
+  }
+
 }
 
 
