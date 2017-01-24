@@ -26,12 +26,15 @@ if len(sys.argv)==1:
 if len(sys.argv) > 1:
     host = sys.argv[1]
 
+
+size = 1
  
 if len(sys.argv)>2:
     size = int(sys.argv[2])
 
-bufsize = 8
+bufsize = 8*1024
 
+# Size of message that you submit.
 if len(sys.argv)>3:
     bufsize = int(sys.argv[3])
   
